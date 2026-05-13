@@ -1,0 +1,213 @@
+:root {
+    /* Background */
+    --bg-app: #31363b;
+    --bg-panel: #232629;
+    --bg-workspace: #1d2023;
+    --bg-canvas: #ffffff;
+
+    /* Text & border */
+    --text-primary: #eff0f1;
+    --text-secondary: #7f8c8d;
+    --border-color: #4d5057;
+    --accent-color: #3daee9;
+
+    /* Height & Width */
+    --menu-height: 28px;
+    --toolbar-height: 40px;
+    --statusbar-height: 24px;
+    --sidebar-width: 260px;
+
+    --font-primary: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--font-primary);
+    background-color: var(--bg-app);
+    color: var(--text-primary);
+    height: 100vh;
+    overflow: hidden;
+}
+
+.app-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.menu-bar {
+    height: var(--menu-height);
+    background-color: var(--bg-panel);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    font-size: 0.85rem;
+}
+
+.menu-item {
+    padding: 4px 12px;
+    cursor: pointer;
+    border-radius: 3px;
+}
+
+.menu-item:hover {
+    background-color: var(--accent-color);
+    color: white;
+}
+
+.toolbar {
+    height: var(--toolbar-height);
+    background-color: var(--bg-app);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    padding: 0 15px;
+    gap: 20px;
+    font-size: 0.9rem;
+}
+
+.main-workspace {
+    display: flex;
+    flex-grow: 1;
+    overflow: hidden;
+}
+
+.sidebar {
+    width: var(--sidebar-width);
+    background-color: var(--bg-panel);
+    display: flex;
+    flex-direction: column;
+}
+
+.left-sidebar {
+    border-right: 1px solid var(--border-color);
+    width: 60px;
+}
+
+.right-sidebar {
+    display: flex;
+    flex-direction: column;
+}
+
+.right-sidebar .docker:last-child {
+    flex-grow: 1;
+}
+
+.docker {
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+}
+
+.docker-title {
+    background-color: #2a2e32;
+    padding: 5px 10px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.docker-content {
+    padding: 10px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.canvas-container {
+    flex-grow: 1;
+    background-color: var(--bg-workspace);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    padding: 40px;
+}
+
+#drawing-canvas {
+    background-color: var(--bg-canvas);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
+    cursor: crosshair;
+    transform-origin: center center;
+}
+
+.status-bar {
+    height: var(--statusbar-height);
+    background-color: var(--bg-panel);
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 15px;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.status-right {
+    display: flex;
+    gap: 15px;
+}
+
+.color-picker-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 15px !important;
+}
+
+#color-wheel-canvas {
+    cursor: crosshair;
+    max-width: 100%;
+}
+
+.current-color-display {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+}
+
+#active-color-preview {
+    width: 30px;
+    height: 30px;
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+    background-color: #000;
+}
+
+#color-hex-code {
+    font-family: monospace;
+    font-size: 0.8rem;
+    color: var(--text-primary);
+}
+
+.palette-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    padding: 5px;
+}
+
+.palette-color {
+    width: 22px;
+    height: 22px;
+    border-radius: 2px;
+    cursor: pointer;
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    transition: transform 0.1s ease;
+}
+
+.palette-color:hover {
+    transform: scale(1.15);
+    border-color: var(--text-primary);
+}
+
+input[type="color"] {
+    display: none;
+}

@@ -1,0 +1,17 @@
+# IDEs
+.vscode/
+.idea/
+*.suo
+*.sln
+
+# SO
+.DS_Store
+.DS_Store?
+._*
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Node.js
+node_modules/
+npm-debug.log

@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FreeHands - A Drawing WebApp</title>
+    <link rel="stylesheet" href="src/css/style.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <nav class="menu-bar">
+            <div class="menu-item">File</div>
+            <div class="menu-item">Edit</div>
+            <div class="menu-item">View</div>
+            <div class="menu-item">Image</div>
+            <div class="menu-item">Layer</div>
+        </nav>
+
+        <header class="toolbar">
+            <div class="tool-group">
+                <label for="brush-size" style="font-size: 0.85rem;">
+                    Size: <span id="brush-size-val">5</span>px
+                </label>
+                <input type="range" id="brush-size" min="1" max="100" value="5">
+            </div>
+
+            <div class="tool-group" style="font-size: 0.85rem; color: var(--text-secondary);">
+                Opacity: 100%
+            </div>
+        </header>
+
+        <div class="main-workspace">
+
+            <aside class="sidebar left-sidebar">
+                <div class="docker-title">Toolbox</div>
+                <div class="docker-content">
+                    [ Brush ]<br>[ Eraser ]<br>[ Bucket ]
+                </div>
+            </aside>
+
+            <main class="canvas-container">
+                <canvas id="drawing-canvas"></canvas>
+            </main>
+
+            <aside class="sidebar right-sidebar">
+                <div class="docker" style="flex-grow: 0; min-height: 240px;">
+                    <div class="docker-title">Color Selector (HSV)</div>
+                    <div class="docker-content color-picker-container">
+                        <canvas id="color-wheel-canvas"></canvas>
+
+                        <div class="current-color-display">
+                            <div id="active-color-preview"></div>
+                            <span id="color-hex-code">#000000</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="docker" style="flex-grow: 0; height: 150px;">
+                    <div class="docker-title">Color palette</div>
+                    <div class="docker-content" style="overflow-y: auto;">
+                        <div id="color-palette" class="palette-grid">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="docker">
+                    <div class="docker-title">Layers</div>
+                    <div class="docker-content" id="layers-list">
+                        <div style="font-style: italic; opacity: 0.5;">Layer 1 (Background)</div>
+                    </div>
+                </div>
+            </aside>
+
+        </div>
+
+        <footer class="status-bar">
+            <div class="status-left">Ready</div>
+            <div class="status-right">
+                <span>800 x 600 px</span>
+                <span>RGB (8-bit)</span>
+                <span>Zoom: 100%</span>
+            </div>
+        </footer>
+    </div>
+
+    <script type="module" src="src/js/app.js"></script>
+</body>
+
+</html>
