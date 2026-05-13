@@ -41,9 +41,9 @@ export class ColorManager {
         }
 
         const angleRad = hue * Math.PI / 180;
-        const p1 = { x: center + triRadius * Math.cos(angleRad), y: center + triRadius * Math.sin(angleRad) }; // Cor Pura
-        const p2 = { x: center + triRadius * Math.cos(angleRad + 2.0944), y: center + triRadius * Math.sin(angleRad + 2.0944) }; // Branco (120 graus)
-        const p3 = { x: center + triRadius * Math.cos(angleRad + 4.1888), y: center + triRadius * Math.sin(angleRad + 4.1888) }; // Preto (240 graus)
+        const p1 = { x: center + triRadius * Math.cos(angleRad), y: center + triRadius * Math.sin(angleRad) };
+        const p2 = { x: center + triRadius * Math.cos(angleRad + 2.0944), y: center + triRadius * Math.sin(angleRad + 2.0944) };
+        const p3 = { x: center + triRadius * Math.cos(angleRad + 4.1888), y: center + triRadius * Math.sin(angleRad + 4.1888) };
 
         ctx.beginPath();
         ctx.moveTo(p1.x, p1.y);
