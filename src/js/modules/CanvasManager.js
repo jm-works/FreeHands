@@ -3,23 +3,19 @@ export class CanvasManager {
         this.canvas = document.getElementById(canvasId);
         this.container = this.canvas.parentElement;
         this.ctx = this.canvas.getContext('2d');
-
-        // (Sim, é exatamente isso que você está pensando, funciona, isso que importa.)
         this.isDrawing = false;
-
-        // Brush settings
         this.brushColor = '#000000';
         this.brushSize = 5;
-
-        // Pan & Zoom
         this.scale = 1;
         this.offsetX = 0;
         this.offsetY = 0;
-
         this.isPanning = false;
         this.isSpacePressed = false;
         this.panStartX = 0;
         this.panStartY = 0;
+        this.undoStack = [];
+        this.redoStack = [];
+        this.maxHistory = 30;
 
         this.init();
     }
@@ -31,29 +27,39 @@ export class CanvasManager {
     }
 
     setupCanvas() {
-        // Canvas Size (Irei deixar dinamico essa desgraça em algum momento, acalmem)
         this.canvas.width = 800;
         this.canvas.height = 600;
 
-        // Paper (Vou deixar dinamico em algum momento, se eu lembrar)
         this.ctx.fillStyle = '#ffffff';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-        // Brush Config
         this.ctx.lineWidth = this.brushSize;
         this.ctx.lineCap = 'round';
         this.ctx.strokeStyle = this.brushColor;
+
+        this.saveState();
     }
 
     addEventListeners() {
         this.container.addEventListener('mousedown', this.handleMouseDown.bind(this));
-        this.container.addEventListener('wheel', this.handleWheel.bind(this), { passive: false });
 
         window.addEventListener('mousemove', this.handleMouseMove.bind(this));
         window.addEventListener('mouseup', this.handleMouseUp.bind(this));
 
+        this.container.addEventListener('wheel', this.handleWheel.bind(this), { passive: false });
+
         window.addEventListener('keydown', this.handleKeyDown.bind(this));
         window.addEventListener('keyup', this.handleKeyUp.bind(this));
+    }
+
+    setBrushColor(color) {
+        this.brushColor = color;
+        this.ctx.strokeStyle = color;
+    }
+
+    setBrushSize(size) {
+        this.brushSize = size;
+        this.ctx.lineWidth = size;
     }
 
     handleWheel(e) {
@@ -64,7 +70,19 @@ export class CanvasManager {
     }
 
     handleKeyDown(e) {
-        if (e.code === 'Space') {
+        const isCtrl = e.ctrlKey || e.metaKey;
+        if (isCtrl && e.key.toLowerCase() === 'z') {
+            e.preventDefault();
+            if (e.shiftKey) {
+                this.redo();
+            } else {
+                this.undo();
+            }
+        } else if (isCtrl && e.key.toLowerCase() === 'y') {
+            e.preventDefault();
+            this.redo();
+        }
+        else if (e.code === 'Space') {
             if (!this.isSpacePressed) {
                 this.isSpacePressed = true;
                 this.updateCursor();
@@ -140,11 +158,11 @@ export class CanvasManager {
         if (this.isDrawing) {
             this.isDrawing = false;
             this.ctx.beginPath();
+            this.saveState();
         }
     }
 
     getMousePos(e) {
-        // Mouse Settings (Em algum momento terá suporte a mesa digitalizadora)
         const rect = this.canvas.getBoundingClientRect();
         return {
             x: (e.clientX - rect.left) / this.scale,
@@ -164,13 +182,40 @@ export class CanvasManager {
         this.ctx.moveTo(pos.x, pos.y);
     }
 
-    setBrushColor(color) {
-        this.brushColor = color;
-        this.ctx.strokeStyle = color;
+    saveState() {
+        this.undoStack.push(this.canvas.toDataURL());
+
+        this.redoStack = [];
+
+        if (this.undoStack.length > this.maxHistory) {
+            this.undoStack.shift();
+        }
     }
 
-    setBrushSize(size) {
-        this.brushSize = size;
-        this.ctx.lineWidth = size;
+    undo() {
+        if (this.undoStack.length > 1) {
+            const currentState = this.undoStack.pop();
+            this.redoStack.push(currentState);
+
+            const previousState = this.undoStack[this.undoStack.length - 1];
+            this.restoreState(previousState);
+        }
+    }
+
+    redo() {
+        if (this.redoStack.length > 0) {
+            const nextState = this.redoStack.pop();
+            this.undoStack.push(nextState);
+            this.restoreState(nextState);
+        }
+    }
+
+    restoreState(dataUrl) {
+        const img = new Image();
+        img.src = dataUrl;
+        img.onload = () => {
+            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            this.ctx.drawImage(img, 0, 0);
+        };
     }
 }

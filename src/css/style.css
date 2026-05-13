@@ -98,7 +98,43 @@ body {
 
 .left-sidebar {
     border-right: 1px solid var(--border-color);
-    width: 60px;
+    width: 54px;
+    background-color: var(--bg-panel);
+}
+
+.toolbox-grid {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 0;
+}
+
+.tool-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    background-color: transparent;
+    border: 1px solid transparent;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.tool-btn img {
+    filter: invert(1);
+    pointer-events: none;
+}
+
+.tool-btn:hover {
+    background-color: var(--border-color);
+}
+
+.tool-btn.active {
+    background-color: rgba(61, 174, 233, 0.2);
+    border-color: var(--accent-color);
 }
 
 .right-sidebar {
@@ -180,134 +216,162 @@ body {
 .current-color-display {
     display: flex;
     align-items: center;
-    gap: 10px;
+    justify-content: center;
+    gap: 15px;
     width: 100%;
+    background-color: rgba(0, 0, 0, 0.2);
+    padding: 8px;
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
 }
 
 #active-color-preview {
-    width: 30px;
-    height: 30px;
-    border-radius: 4px;
-    border: 1px solid var(--border-color);
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 2px solid var(--text-primary);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
     background-color: #000;
 }
 
 #color-hex-code {
     font-family: monospace;
-    font-size: 0.8rem;
+    font-size: 1rem;
+    font-weight: bold;
     color: var(--text-primary);
+    text-transform: uppercase;
 }
 
 .palette-grid {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
-    gap: 8px;
+    gap: 6px;
     padding: 5px;
 }
 
 .palette-color {
     aspect-ratio: 1 / 1;
-    border-radius: 2px;
+    border-radius: 3px;
     cursor: pointer;
-    border: 1px solid rgba(0, 0, 0, 0.2);
-    transition: transform 0.1s ease;
+    border: 1px solid rgba(0, 0, 0, 0.5);
+    transition: transform 0.1s ease, border-color 0.1s ease;
 }
 
 .palette-color:hover {
     transform: scale(1.15);
     border-color: var(--text-primary);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+    z-index: 2;
 }
 
 input[type="color"] {
     display: none;
 }
 
-input[type="number"] {
-    background-color: #2a2e32;
-    color: var(--text-primary);
+.value-slider {
+    position: relative;
+    width: 180px;
+    height: 26px;
+    border-radius: 4px;
+    background-color: #17191b;
     border: 1px solid var(--border-color);
-    border-radius: 3px;
-    padding: 2px 4px;
-    font-family: inherit;
-    font-size: 0.8rem;
-    width: 45px;
-    text-align: right;
-    outline: none;
+    overflow: hidden;
 }
 
-input[type="number"]:focus {
-    border-color: var(--accent-color);
-    background-color: #1a1e22;
-}
-
-input[type="number"]::-webkit-inner-spin-button,
-input[type="number"]::-webkit-outer-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
-}
-
-input[type="number"] {
-    --moz-appearance: textfield;
-}
-
-.slider {
+.tool-slider {
     -webkit-appearance: none;
     appearance: none;
-    width: 130px;
+    width: 100%;
+    height: 100%;
+    margin: 0;
     background: transparent;
     outline: none;
-    margin: 0 5px;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 1;
+    cursor: ew-resize;
 }
 
-.slider::-webkit-slider-runnable-track {
+.tool-slider::-webkit-slider-runnable-track {
     width: 100%;
-    height: 6px;
-    cursor: pointer;
-    background-color: #202326;
-    border-radius: 3px;
-    border: 1px solid var(--border-color);
+    height: 100%;
+    background: linear-gradient(to right, var(--accent-color) var(--slider-fill, 0%), transparent var(--slider-fill, 0%));
 }
 
-.slider::-webkit-slider-thumb {
+.tool-slider::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    height: 14px;
-    width: 14px;
-    border-radius: 50%;
-    background-color: var(--accent-color);
-    cursor: pointer;
-    border: 2px solid #1a516e;
-    margin-top: -5px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
-    transition: background 0.1s ease, transform 0.1s ease;
+    width: 0;
+    height: 100%;
 }
 
-.slider:hover::-webkit-slider-thumb {
-    background-color: #ffffff;
-    transform: scale(1.1);
-}
-
-.slider::-moz-range-track {
+.tool-slider::-moz-range-track {
     width: 100%;
-    height: 6px;
-    cursor: pointer;
-    background-color: #202326;
-    border-radius: 3px;
-    border: 1px solid var(--border-color);
+    height: 100%;
+    background-color: transparent;
 }
 
-.slider::-moz-range-thumb {
-    height: 12px;
-    width: 12px;
-    border-radius: 50%;
+.tool-slider::-moz-range-progress {
     background-color: var(--accent-color);
-    cursor: pointer;
-    border: 2px solid #1a516e;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+    height: 100%;
 }
 
-.slider::-moz-range-progress {
-    background-color: var(--accent-color);
-    height: 6px;
+.tool-slider::-moz-range-thumb {
+    width: 0;
+    height: 100%;
+    border: none;
+}
+
+.value-slider-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 10px;
+    z-index: 2;
+    pointer-events: none;
+    color: var(--text-primary);
+    font-size: 0.8rem;
+    font-weight: 500;
+    text-shadow: 0px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.value-slider-inputs {
+    display: flex;
+    align-items: center;
+    pointer-events: auto;
+}
+
+.value-slider-inputs input[type="number"] {
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 0.8rem;
+    font-weight: bold;
+    width: 45px;
+    text-align: right;
+    padding: 2px 4px;
+    text-shadow: 0px 1px 2px rgba(0, 0, 0, 0.8);
+    outline: none;
+    appearance: textfield;
+    -moz-appearance: textfield;
+    transition: background 0.1s ease;
+}
+
+.value-slider-inputs input[type="number"]:focus {
+    background-color: rgba(0, 0, 0, 0.6);
     border-radius: 3px;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+.value-slider-inputs input[type="number"]::-webkit-inner-spin-button,
+.value-slider-inputs input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
 }

@@ -19,20 +19,30 @@
         </nav>
 
         <header class="toolbar">
-            <div class="tool-group">
-                <label for="brush-size" class="control-label">Size</label>
-                <input type="number" id="brush-size-val" min="1" max="100" value="5">
-                <span>px</span>
-                <input type="range" id="brush-size" min="1" max="100" value="5" class="slider">
+            <div class="value-slider">
+                <input type="range" id="brush-size" min="1" max="100" value="5" class="tool-slider">
+
+                <div class="value-slider-overlay">
+                    <label for="brush-size">Tamanho</label>
+                    <div class="value-slider-inputs">
+                        <input type="number" id="brush-size-val" min="1" max="100" value="5">
+                        <span>px</span>
+                    </div>
+                </div>
             </div>
 
-            <div class="spacer" style="width: 20px;"></div>
+            <div style="width: 10px;"></div>
 
-            <div class="tool-group">
-                <label for="brush-opacity" class="control-label">Opacity</label>
-                <input type="number" id="brush-opacity-val" min="0" max="100" value="100">
-                <span>%</span>
-                <input type="range" id="brush-opacity" min="0" max="100" value="100" class="slider">
+            <div class="value-slider">
+                <input type="range" id="brush-opacity" min="0" max="100" value="100" class="tool-slider">
+
+                <div class="value-slider-overlay">
+                    <label for="brush-opacity">Opacidade</label>
+                    <div class="value-slider-inputs">
+                        <input type="number" id="brush-opacity-val" min="0" max="100" value="100">
+                        <span>%</span>
+                    </div>
+                </div>
             </div>
         </header>
 

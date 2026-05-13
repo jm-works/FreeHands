@@ -15,9 +15,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const opacityInput = document.getElementById('brush-opacity-val');
 
     function syncControls(slider, numberInput, callback) {
+        const updateSliderFill = () => {
+            const min = parseFloat(slider.min) || 0;
+            const max = parseFloat(slider.max) || 100;
+            const val = parseFloat(slider.value);
+            const percentage = ((val - min) / (max - min)) * 100;
+            slider.style.setProperty('--slider-fill', `${percentage}%`);
+        };
+
         slider.addEventListener('input', (e) => {
             const val = e.target.value;
             numberInput.value = val;
+            updateSliderFill();
             if (callback) callback(val);
         });
 
@@ -29,19 +38,20 @@ document.addEventListener('DOMContentLoaded', () => {
             if (val > slider.max) val = slider.max;
 
             slider.value = val;
+            updateSliderFill();
             if (callback) callback(val);
         });
 
+        updateSliderFill();
         if (callback) callback(slider.value);
     }
 
-    // Vinculando o Tamanho do Pincel
     syncControls(sizeSlider, sizeInput, (val) => {
         canvasManager.setBrushSize(val);
     });
 
     syncControls(opacitySlider, opacityInput, (val) => {
-        console.log("Opacidade atualizada:", val, "%");
+        console.log("Opacity Update:", val, "%");
     });
 
     const toolBtns = document.querySelectorAll('.tool-btn');
