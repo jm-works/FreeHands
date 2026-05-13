@@ -91,6 +91,11 @@ export class CanvasManager {
 
     updateTransform() {
         this.canvas.style.transform = `translate(${this.offsetX}px, ${this.offsetY}px) scale(${this.scale})`;
+
+        const zoomDisplay = document.getElementById('zoom-val-display');
+        if (zoomDisplay) {
+            zoomDisplay.textContent = `Zoom: ${Math.round(this.scale * 100)}%`;
+        }
     }
 
     updateCursor() {

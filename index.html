@@ -20,23 +20,46 @@
 
         <header class="toolbar">
             <div class="tool-group">
-                <label for="brush-size" style="font-size: 0.85rem;">
-                    Size: <span id="brush-size-val">5</span>px
-                </label>
-                <input type="range" id="brush-size" min="1" max="100" value="5">
+                <label for="brush-size" class="control-label">Size</label>
+                <input type="number" id="brush-size-val" min="1" max="100" value="5">
+                <span>px</span>
+                <input type="range" id="brush-size" min="1" max="100" value="5" class="slider">
             </div>
 
-            <div class="tool-group" style="font-size: 0.85rem; color: var(--text-secondary);">
-                Opacity: 100%
+            <div class="spacer" style="width: 20px;"></div>
+
+            <div class="tool-group">
+                <label for="brush-opacity" class="control-label">Opacity</label>
+                <input type="number" id="brush-opacity-val" min="0" max="100" value="100">
+                <span>%</span>
+                <input type="range" id="brush-opacity" min="0" max="100" value="100" class="slider">
             </div>
         </header>
 
         <div class="main-workspace">
 
             <aside class="sidebar left-sidebar">
-                <div class="docker-title">Toolbox</div>
-                <div class="docker-content">
-                    [ Brush ]<br>[ Eraser ]<br>[ Bucket ]
+                <div class="docker-title" style="text-align: center; font-size: 0.7rem;">Tools</div>
+                <div class="docker-content toolbox-grid">
+
+                    <button class="tool-btn active" id="btn-brush" title="Pincel">
+                        <img src="src/assets/icons/Toolbar/Brush.svg" alt="Pincel" width="22" height="22">
+                    </button>
+
+                    <button class="tool-btn" id="btn-eraser" title="Borracha">
+                        <img src="src/assets/icons/Toolbar/eraser.svg" alt="Borracha" width="22" height="22">
+                    </button>
+
+                    <button class="tool-btn" id="btn-fill" title="Balde">
+                        <img src="src/assets/icons/Toolbar/Fill.svg" alt="Balde" width="22" height="22">
+                    </button>
+
+                    <div style="height: 1px; background: var(--border-color); width: 80%; margin: 5px 0;"></div>
+
+                    <button class="tool-btn" id="btn-pan" title="Mover / Pan">
+                        <img src="src/assets/icons/Toolbar/hand.svg" alt="Mover" width="22" height="22">
+                    </button>
+
                 </div>
             </aside>
 
@@ -80,7 +103,7 @@
             <div class="status-right">
                 <span>800 x 600 px</span>
                 <span>RGB (8-bit)</span>
-                <span>Zoom: 100%</span>
+                <span id="zoom-val-display">Zoom: 100%</span>
             </div>
         </footer>
     </div>
