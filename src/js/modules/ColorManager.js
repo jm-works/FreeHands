@@ -54,6 +54,7 @@ export class ColorManager {
         ctx.fill();
         ctx.save();
         ctx.clip();
+
         const gradHue = ctx.createLinearGradient(p2.x, p2.y, p1.x, p1.y);
         gradHue.addColorStop(0, 'rgba(255,255,255,0)');
         gradHue.addColorStop(1, `hsl(${hue}, 100%, 50%)`);
@@ -69,7 +70,7 @@ export class ColorManager {
 
         const hx = center + radius * Math.cos(angleRad);
         const hy = center + radius * Math.sin(angleRad);
-        this.drawHandle(hx, hy, '#ffffff');
+        this.drawHandle(hx, hy, this.hsvToHex(hue, 1, 1));
 
         const svx = (val * sat) * p1.x + (val * (1 - sat)) * p2.x + (1 - val) * p3.x;
         const svy = (val * sat) * p1.y + (val * (1 - sat)) * p2.y + (1 - val) * p3.y;
@@ -78,14 +79,18 @@ export class ColorManager {
 
     drawHandle(x, y, color) {
         this.ctx.beginPath();
-        this.ctx.arc(x, y, 6, 0, Math.PI * 2);
+        this.ctx.arc(x, y, 5, 0, Math.PI * 2);
         this.ctx.fillStyle = color;
         this.ctx.fill();
+
         this.ctx.lineWidth = 2;
-        this.ctx.strokeStyle = '#000000';
-        this.ctx.stroke();
         this.ctx.strokeStyle = '#ffffff';
-        this.ctx.lineWidth = 1;
+        this.ctx.stroke();
+
+        this.ctx.beginPath();
+        this.ctx.arc(x, y, 6, 0, Math.PI * 2);
+        this.ctx.lineWidth = 1.5;
+        this.ctx.strokeStyle = '#000000';
         this.ctx.stroke();
     }
 
