@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         slider.addEventListener('input', (e) => {
-            const val = e.target.value;
+            const val = parseInt(e.target.value, 10);
             numberInput.value = val;
             updateSliderFill();
             if (callback) callback(val);
@@ -64,9 +64,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const toolId = btn.id;
             switch (toolId) {
                 case 'btn-brush':
+                    canvasManager.setTool('brush');
                     console.log("Tool select: Brush");
                     break;
                 case 'btn-eraser':
+                    canvasManager.setTool('eraser');
                     console.log("Tool select: Eraser");
                     break;
                 case 'btn-fill':

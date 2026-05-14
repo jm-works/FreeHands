@@ -46,7 +46,7 @@ body {
     overflow: hidden;
 }
 
-.canvas-container {
+.workspace-area {
     flex-grow: 1;
     background-color: var(--bg-workspace);
     display: flex;
@@ -56,9 +56,22 @@ body {
     padding: 40px;
 }
 
-#drawing-canvas {
+.workspace-area .canvas-container {
     background-color: var(--bg-canvas);
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
     cursor: crosshair;
-    transform-origin: center center;
+}
+
+#brush-cursor-overlay {
+    position: fixed;
+    pointer-events: none;
+    z-index: 9999;
+    border-radius: 50%;
+
+    border: 1px solid rgba(0, 0, 0, 0.5);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.5);
+
+    background-color: transparent;
+    transform: translate(-50%, -50%);
+    display: none;
 }
