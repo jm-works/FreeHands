@@ -1,0 +1,64 @@
+:root {
+    /* Background */
+    --bg-app: #31363b;
+    --bg-panel: #232629;
+    --bg-workspace: #1d2023;
+    --bg-canvas: #ffffff;
+
+    /* Text & border */
+    --text-primary: #eff0f1;
+    --text-secondary: #7f8c8d;
+    --border-color: #4d5057;
+    --accent-color: #3daee9;
+
+    /* Height & Width */
+    --menu-height: 28px;
+    --toolbar-height: 40px;
+    --statusbar-height: 24px;
+    --sidebar-width: 260px;
+
+    --font-primary: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--font-primary);
+    background-color: var(--bg-app);
+    color: var(--text-primary);
+    height: 100vh;
+    overflow: hidden;
+}
+
+.app-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.main-workspace {
+    display: flex;
+    flex-grow: 1;
+    overflow: hidden;
+}
+
+.canvas-container {
+    flex-grow: 1;
+    background-color: var(--bg-workspace);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    padding: 40px;
+}
+
+#drawing-canvas {
+    background-color: var(--bg-canvas);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
+    cursor: crosshair;
+    transform-origin: center center;
+}

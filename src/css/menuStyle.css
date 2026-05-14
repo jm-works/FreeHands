@@ -1,0 +1,20 @@
+.menu-bar {
+    height: var(--menu-height);
+    background-color: var(--bg-panel);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    font-size: 0.85rem;
+}
+
+.menu-item {
+    padding: 4px 12px;
+    cursor: pointer;
+    border-radius: 3px;
+}
+
+.menu-item:hover {
+    background-color: var(--accent-color);
+    color: white;
+}

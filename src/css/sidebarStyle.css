@@ -1,0 +1,41 @@
+.sidebar {
+    width: var(--sidebar-width);
+    background-color: var(--bg-panel);
+    display: flex;
+    flex-direction: column;
+}
+
+.left-sidebar {
+    border-right: 1px solid var(--border-color);
+    width: 54px;
+    background-color: var(--bg-panel);
+}
+
+.right-sidebar {
+    display: flex;
+    flex-direction: column;
+}
+
+.right-sidebar .docker:last-child {
+    flex-grow: 1;
+}
+
+.docker {
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+}
+
+.docker-title {
+    background-color: #2a2e32;
+    padding: 5px 10px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.docker-content {
+    padding: 10px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
