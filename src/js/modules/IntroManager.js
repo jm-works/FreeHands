@@ -39,15 +39,41 @@ export class IntroManager {
         this.resize();
         window.addEventListener('resize', () => this.resize());
 
+        this.audio = new Audio('src/assets/sound/startup.mp3');
+
+        const startInteraction = () => {
+            if (this.phase === 'awaiting_interaction') {
+                this.audio.play().catch(() => { });
+                this.phase = 'scene0';
+                this.phaseT = 0;
+            }
+        };
+
         this.root.addEventListener('click', () => {
+            startInteraction();
             if (this.phase === 'idle') {
                 this.phase = 'shutoff';
                 this.shutT = 0;
             }
         });
 
+        window.addEventListener('keydown', startInteraction);
+
         this.tick = this.tick.bind(this);
-        requestAnimationFrame(this.tick);
+
+        const p = this.audio.play();
+        if (p !== undefined) {
+            p.then(() => {
+                this.phase = 'scene0';
+                requestAnimationFrame(this.tick);
+            }).catch(() => {
+                this.phase = 'awaiting_interaction';
+                requestAnimationFrame(this.tick);
+            });
+        } else {
+            this.phase = 'awaiting_interaction';
+            requestAnimationFrame(this.tick);
+        }
     }
 
     buildNoise(alpha) {
@@ -369,6 +395,15 @@ export class IntroManager {
     }
 
     tick(now) {
+        if (this.phase === 'awaiting_interaction') {
+            this.lastNow = now;
+            this.ctx.fillStyle = '#000';
+            this.ctx.fillRect(0, 0, this.W, this.H);
+            this.txt('PRESS ANY BUTTON TO START', this.W / 2, this.H / 2, 25, '400', 'Special Elite', '#fff', 1, 'center', '0.1em');
+            requestAnimationFrame(this.tick);
+            return;
+        }
+
         const dt = now - this.lastNow;
         this.lastNow = now;
         this.phaseT += dt;
