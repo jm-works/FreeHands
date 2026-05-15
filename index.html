@@ -14,47 +14,15 @@
     <link rel="stylesheet" href="src/css/menuStyle.css">
     <link rel="stylesheet" href="src/css/sidebarStyle.css">
     <link rel="stylesheet" href="src/css/paletteStyle.css">
+    <link rel="stylesheet" href="src/css/introductionStyle.css">
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
 
-    <style>
-        .app-logo {
-            display: flex;
-            align-items: baseline;
-            gap: 0;
-            margin-right: 18px;
-            padding-right: 18px;
-            border-right: 1px solid var(--border-strong);
-            user-select: none;
-        }
-
-        .app-logo-text {
-            font-family: 'Playfair Display', Georgia, serif;
-            font-size: 1rem;
-            font-weight: 900;
-            color: var(--text-primary);
-            letter-spacing: 0.02em;
-            line-height: 1;
-        }
-
-        .app-logo-text span {
-            color: var(--accent-color);
-        }
-
-        .app-logo-tagline {
-            display: none;
-        }
-
-        .menu-divider {
-            width: 1px;
-            height: 14px;
-            background: var(--border-strong);
-            margin: 0 4px;
-        }
-    </style>
 </head>
 
 <body>
+    <div id="fh-root"><canvas id="fh-c"></canvas></div>
+
     <div class="app-container">
         <nav class="menu-bar">
             <div class="app-logo">

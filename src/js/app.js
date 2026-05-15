@@ -1,15 +1,17 @@
 import { CanvasManager } from './modules/CanvasManager.js';
 import { ColorManager } from './modules/ColorManager.js';
+import { IntroManager } from './modules/IntroManager.js';
 
 document.addEventListener('DOMContentLoaded', () => {
 
     document.addEventListener('contextmenu', (e) => e.preventDefault());
 
+    const introManager = new IntroManager('fh-root', 'fh-c');
+
     const canvasManager = new CanvasManager('drawing-canvas');
     const colorManager = new ColorManager('color-wheel-canvas', (color) => {
         canvasManager.setBrushColor(color);
     });
-
     const sizeSlider = document.getElementById('brush-size');
     const sizeInput = document.getElementById('brush-size-val');
 
