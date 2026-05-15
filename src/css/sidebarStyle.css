@@ -14,10 +14,14 @@
 .right-sidebar {
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 }
 
 .right-sidebar .docker:last-child {
-    flex-grow: 1;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
 }
 
 .docker {
@@ -27,7 +31,7 @@
 }
 
 .docker-title {
-    background-color: #2a2e32;
+    background-color: var(--bg-app);
     padding: 5px 10px;
     font-size: 0.8rem;
     font-weight: bold;
@@ -38,4 +42,197 @@
     padding: 10px;
     font-size: 0.85rem;
     color: var(--text-secondary);
+}
+
+.layer-toolbar {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px;
+    background-color: var(--bg-app);
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+}
+
+.layer-btn {
+    background: none;
+    border: 1px solid transparent;
+    color: var(--text-primary);
+    cursor: pointer;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+}
+
+.layer-btn:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.layer-btn img {
+    width: 16px;
+    height: 16px;
+    filter: invert(1);
+    pointer-events: none;
+}
+
+.layer-opacity-container {
+    display: flex;
+    align-items: center;
+    background-color: var(--bg-panel);
+    padding: 6px 10px;
+    font-size: 0.8rem;
+    gap: 8px;
+    border-bottom: 1px solid var(--bg-workspace);
+    flex-shrink: 0;
+}
+
+.layer-opacity-container label {
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+#layer-opacity-slider {
+    flex-grow: 1;
+    cursor: ew-resize;
+    accent-color: var(--text-primary);
+    height: 4px;
+}
+
+#layer-opacity-label {
+    min-width: 35px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.layer-blend-select {
+    background-color: var(--bg-workspace);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 3px;
+    padding: 2px;
+    font-size: 0.75rem;
+    outline: none;
+    max-width: 80px;
+}
+
+#layers-list {
+    flex: 1 1 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 0;
+}
+
+.layer-list-container {
+    flex: 1 1 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.layer-list-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.layer-list-container::-webkit-scrollbar-track {
+    background: var(--bg-workspace);
+}
+
+.layer-list-container::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 4px;
+}
+
+.layer-list-container::-webkit-scrollbar-thumb:hover {
+    background: var(--text-secondary);
+}
+
+.layer-item {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--bg-workspace);
+    gap: 12px;
+    font-size: 0.85rem;
+    transition: background-color 0.1s;
+}
+
+.layer-item.active {
+    background-color: color-mix(in srgb, var(--accent-color) 25%, var(--bg-panel));
+    border-left: 3px solid var(--accent-color);
+}
+
+.layer-item:hover:not(.active) {
+    background-color: var(--bg-app);
+}
+
+.layer-icon {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    transition: transform 0.1s;
+    width: 18px;
+    height: 18px;
+}
+
+.layer-icon img {
+    width: 100%;
+    height: 100%;
+    filter: invert(1);
+    pointer-events: none;
+}
+
+.layer-icon:hover {
+    transform: scale(1.15);
+}
+
+.layer-name {
+    flex-grow: 1;
+    user-select: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 2px 0;
+}
+
+.layer-rename-input {
+    flex-grow: 1;
+    background-color: var(--bg-workspace);
+    color: var(--text-primary);
+    border: 1px solid var(--accent-color);
+    border-radius: 3px;
+    padding: 2px 4px;
+    font-family: inherit;
+    font-size: 0.85rem;
+    outline: none;
+    width: 100%;
+}
+
+.layer-context-menu {
+    position: fixed;
+    background-color: var(--bg-panel);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    border-radius: 4px;
+    padding: 4px 0;
+    z-index: 9999;
+    min-width: 150px;
+}
+
+.layer-context-menu-item {
+    padding: 6px 12px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    color: var(--text-primary);
+}
+
+.layer-context-menu-item:hover {
+    background-color: var(--accent-color);
+    color: #ffffff;
 }

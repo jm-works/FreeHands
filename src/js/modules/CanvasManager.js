@@ -3,6 +3,7 @@ import { HistoryManager } from './HistoryManager.js';
 import { FillManager } from './FillManager.js';
 import { PressureBrush } from './PressureBrush.js';
 import { EraserBrush } from './EraserBrush.js';
+import { LayerManager } from './LayerManager.js';
 
 fabric.Object.prototype.selectable = false;
 fabric.Object.prototype.evented = false;
@@ -13,8 +14,7 @@ export class CanvasManager {
             isDrawingMode: true,
             width: 800,
             height: 600,
-            selection: false,
-            backgroundColor: '#ffffff'
+            selection: false
         });
 
         this.workspace = this.canvas.wrapperEl.parentElement;
@@ -29,16 +29,17 @@ export class CanvasManager {
         this.offsetY = 0;
 
         this.cursorManager = new CursorManager(this.workspace);
-        this.historyManager = new HistoryManager(this.canvas);
+        this.historyManager = new HistoryManager(this);
         this.fillManager = new FillManager(this);
 
         this.brushColor = '#000000';
         this.brushSize = 5;
         this.fillTolerance = 32;
+        this.brushOpacity = 1;
 
         this.currentTool = 'brush';
         this.canvas.freeDrawingBrush = new PressureBrush(this.canvas);
-        this.canvas.freeDrawingBrush.color = this.brushColor;
+        this.canvas.freeDrawingBrush.color = this.getBrushColorAsRGBA();
         this.canvas.freeDrawingBrush.width = this.brushSize;
 
         this.canvas.freeDrawingCursor = 'none';
@@ -57,6 +58,12 @@ export class CanvasManager {
         this.onSpaceToggle = null;
 
         this.init();
+
+        this.layerCanvas = document.createElement('canvas');
+        this.layerCtx = this.layerCanvas.getContext('2d');
+
+        this.layerManager = new LayerManager(this);
+        this.overrideRender();
     }
 
     init() {
@@ -68,6 +75,58 @@ export class CanvasManager {
         this.cursorManager.updateSystemCursor(this.isSpacePressed, this.isPanning);
     }
 
+    overrideRender() {
+        this.canvas._renderObjects = (ctx, objects) => {
+            if (!this.layerManager) {
+                for (let i = 0, len = objects.length; i < len; ++i) {
+                    objects[i].render(ctx);
+                }
+                return;
+            }
+
+            const layerObjects = {};
+            for (let i = 0, len = objects.length; i < len; ++i) {
+                const obj = objects[i];
+                const layerId = obj.layerId;
+                if (!layerId) continue;
+                if (!layerObjects[layerId]) layerObjects[layerId] = [];
+                layerObjects[layerId].push(obj);
+            }
+
+            const layersReversed = [...this.layerManager.layers].reverse();
+            const v = this.canvas.viewportTransform;
+            const retina = this.canvas.getRetinaScaling();
+
+            this.layerCanvas.width = this.canvas.lowerCanvasEl.width;
+            this.layerCanvas.height = this.canvas.lowerCanvasEl.height;
+
+            for (let i = 0; i < layersReversed.length; i++) {
+                const layer = layersReversed[i];
+                if (!layer.visible) continue;
+
+                const objs = layerObjects[layer.id];
+                if (!objs || objs.length === 0) continue;
+
+                this.layerCtx.clearRect(0, 0, this.layerCanvas.width, this.layerCanvas.height);
+                this.layerCtx.save();
+                this.layerCtx.scale(retina, retina);
+                this.layerCtx.transform(v[0], v[1], v[2], v[3], v[4], v[5]);
+
+                for (let j = 0; j < objs.length; j++) {
+                    objs[j].render(this.layerCtx);
+                }
+                this.layerCtx.restore();
+
+                ctx.save();
+                ctx.setTransform(1, 0, 0, 1, 0, 0);
+                ctx.globalAlpha = layer.opacity / 100;
+                ctx.globalCompositeOperation = layer.blendMode || 'source-over';
+                ctx.drawImage(this.layerCanvas, 0, 0);
+                ctx.restore();
+            }
+        };
+    }
+
     updateTransform() {
         this.board.style.transform = `translate(${this.offsetX}px, ${this.offsetY}px) scale(${this.zoom})`;
         this.canvas.calcOffset();
@@ -76,6 +135,7 @@ export class CanvasManager {
     addEventListeners() {
         window.addEventListener('keydown', (e) => {
             const isCtrl = e.ctrlKey || e.metaKey;
+            const isInput = e.target.tagName.toLowerCase() === 'input' || e.target.tagName.toLowerCase() === 'textarea';
 
             if (isCtrl && e.key.toLowerCase() === 'z') {
                 e.preventDefault();
@@ -84,26 +144,32 @@ export class CanvasManager {
             } else if (isCtrl && e.key.toLowerCase() === 'y') {
                 e.preventDefault();
                 this.historyManager.redo();
-            } else if (e.key === 'Shift' && !this.isShiftPressed) {
+            } else if (e.key === 'Shift' && !this.isShiftPressed && !isInput) {
                 this.isShiftPressed = true;
                 this.canvas.isDrawingMode = false;
-            } else if (e.code === 'Space' && !this.isSpacePressed) {
-                this.isSpacePressed = true;
-                this.canvas.isDrawingMode = false;
-                this.cursorManager.updateSystemCursor(this.isSpacePressed, this.isPanning);
-                if (this.onSpaceToggle) this.onSpaceToggle(true);
+            } else if (e.code === 'Space' && !isInput) {
+                e.preventDefault();
+                if (!this.isSpacePressed) {
+                    this.isSpacePressed = true;
+                    this.canvas.isDrawingMode = false;
+                    this.cursorManager.updateSystemCursor(this.isSpacePressed, this.isPanning);
+                    if (this.onSpaceToggle) this.onSpaceToggle(true);
+                }
             }
         });
 
         window.addEventListener('keyup', (e) => {
-            if (e.key === 'Shift') {
+            const isInput = e.target.tagName.toLowerCase() === 'input' || e.target.tagName.toLowerCase() === 'textarea';
+
+            if (e.key === 'Shift' && !isInput) {
                 this.isShiftPressed = false;
                 if (!this.isResizingBrush && !this.isSpacePressed && (this.currentTool === 'brush' || this.currentTool === 'pen' || this.currentTool === 'eraser')) {
                     this.canvas.isDrawingMode = true;
                 }
             }
 
-            if (e.code === 'Space') {
+            if (e.code === 'Space' && !isInput) {
+                e.preventDefault();
                 this.isSpacePressed = false;
                 if (!this.isShiftPressed && (this.currentTool === 'brush' || this.currentTool === 'pen' || this.currentTool === 'eraser')) {
                     this.canvas.isDrawingMode = true;
@@ -114,7 +180,16 @@ export class CanvasManager {
         });
 
         const interceptDrawing = (e) => {
+            const activeLayer = this.layerManager ? this.layerManager.layers.find(l => l.id === this.layerManager.activeLayerId) : null;
+            const layerPrevent = activeLayer && (activeLayer.locked || !activeLayer.visible);
+
             if (e.shiftKey || this.isShiftPressed || this.isResizingBrush) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                return;
+            }
+
+            if (layerPrevent && !this.isSpacePressed && this.currentTool !== 'pan') {
                 e.preventDefault();
                 e.stopImmediatePropagation();
             }
@@ -127,6 +202,9 @@ export class CanvasManager {
             window.currentPointerPressure = e.pressure !== undefined ? e.pressure : 0.5;
             if (window.currentPointerPressure === 0 && e.pointerType === 'mouse') window.currentPointerPressure = 0.5;
 
+            const activeLayer = this.layerManager ? this.layerManager.layers.find(l => l.id === this.layerManager.activeLayerId) : null;
+            const layerPrevent = activeLayer && (activeLayer.locked || !activeLayer.visible);
+
             if (e.shiftKey || this.isShiftPressed) {
                 e.preventDefault();
                 e.stopImmediatePropagation();
@@ -138,16 +216,6 @@ export class CanvasManager {
                 return;
             }
 
-            if (this.currentTool === 'fill' && !this.isSpacePressed && e.button !== 1) {
-                e.preventDefault();
-                e.stopPropagation();
-                const rect = this.board.getBoundingClientRect();
-                const x = (e.clientX - rect.left) / this.zoom;
-                const y = (e.clientY - rect.top) / this.zoom;
-                this.fillManager.fill(x, y, this.brushColor, this.fillTolerance);
-                return;
-            }
-
             if (e.button === 1 || this.isSpacePressed || this.currentTool === 'pan') {
                 e.preventDefault();
                 e.stopPropagation();
@@ -156,6 +224,23 @@ export class CanvasManager {
                 this.lastPosX = e.clientX;
                 this.lastPosY = e.clientY;
                 this.cursorManager.updateSystemCursor(true, this.isPanning);
+                return;
+            }
+
+            if (layerPrevent) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                return;
+            }
+
+            if (this.currentTool === 'fill') {
+                e.preventDefault();
+                e.stopPropagation();
+                const rect = this.board.getBoundingClientRect();
+                const x = (e.clientX - rect.left) / this.zoom;
+                const y = (e.clientY - rect.top) / this.zoom;
+                this.fillManager.fill(x, y, this.brushColor, this.fillTolerance, this.brushOpacity);
+                return;
             }
         }, { capture: true });
 
@@ -260,13 +345,13 @@ export class CanvasManager {
         if (tool === 'brush') {
             this.canvas.isDrawingMode = true;
             this.canvas.freeDrawingBrush = new PressureBrush(this.canvas);
-            this.canvas.freeDrawingBrush.color = this.brushColor;
+            this.canvas.freeDrawingBrush.color = this.getBrushColorAsRGBA();
             this.canvas.freeDrawingBrush.width = this.brushSize;
             this.canvas.defaultCursor = 'none';
         } else if (tool === 'pen') {
             this.canvas.isDrawingMode = true;
             this.canvas.freeDrawingBrush = new fabric.PencilBrush(this.canvas);
-            this.canvas.freeDrawingBrush.color = this.brushColor;
+            this.canvas.freeDrawingBrush.color = this.getBrushColorAsRGBA();
             this.canvas.freeDrawingBrush.width = this.brushSize;
             this.canvas.freeDrawingBrush.decimate = 1.5;
             this.canvas.defaultCursor = 'none';
@@ -288,8 +373,8 @@ export class CanvasManager {
 
     setBrushColor(color) {
         this.brushColor = color;
-        if (this.currentTool === 'brush' && this.canvas.freeDrawingBrush) {
-            this.canvas.freeDrawingBrush.color = color;
+        if ((this.currentTool === 'brush' || this.currentTool === 'pen') && this.canvas.freeDrawingBrush) {
+            this.canvas.freeDrawingBrush.color = this.getBrushColorAsRGBA();
         }
     }
 
@@ -303,5 +388,20 @@ export class CanvasManager {
 
     setFillTolerance(val) {
         this.fillTolerance = parseInt(val, 10);
+    }
+
+    getBrushColorAsRGBA() {
+        const hex = this.brushColor.replace('#', '');
+        const r = parseInt(hex.substring(0, 2), 16);
+        const g = parseInt(hex.substring(2, 4), 16);
+        const b = parseInt(hex.substring(4, 6), 16);
+        return `rgba(${r}, ${g}, ${b}, ${this.brushOpacity})`;
+    }
+
+    setBrushOpacity(opacity) {
+        this.brushOpacity = opacity / 100;
+        if ((this.currentTool === 'brush' || this.currentTool === 'pen') && this.canvas.freeDrawingBrush) {
+            this.canvas.freeDrawingBrush.color = this.getBrushColorAsRGBA();
+        }
     }
 }

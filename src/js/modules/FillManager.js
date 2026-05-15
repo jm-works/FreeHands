@@ -4,20 +4,28 @@ export class FillManager {
         this.canvas = canvasManager.canvas;
     }
 
-    fill(startX, startY, hexColor, tolerance = 32) {
+    fill(startX, startY, hexColor, tolerance = 32, opacity = 1) {
         startX = Math.floor(startX);
         startY = Math.floor(startY);
 
         const width = this.canvas.width;
         const height = this.canvas.height;
 
+        const targetColor = this.hexToRgba(hexColor, opacity);
+
         if (startX < 0 || startX >= width || startY < 0 || startY >= height) return;
 
-        const ctx = this.canvas.toCanvasElement().getContext('2d', { willReadFrequently: true });
+        const tempReadCanvas = document.createElement('canvas');
+        tempReadCanvas.width = width;
+        tempReadCanvas.height = height;
+        const ctx = tempReadCanvas.getContext('2d', { willReadFrequently: true });
+
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, width, height);
+        ctx.drawImage(this.canvas.toCanvasElement(), 0, 0);
+
         const imgData = ctx.getImageData(0, 0, width, height);
         const data = imgData.data;
-
-        const targetColor = this.hexToRgba(hexColor);
 
         const startPos = (startY * width + startX) * 4;
         const startR = data[startPos];
@@ -55,7 +63,7 @@ export class FillManager {
                 fillData[pos4] = targetColor[0];
                 fillData[pos4 + 1] = targetColor[1];
                 fillData[pos4 + 2] = targetColor[2];
-                fillData[pos4 + 3] = 255;
+                fillData[pos4 + 3] = targetColor[3];
 
                 if (x > 0) stack.push(x - 1, y);
                 if (x < width - 1) stack.push(x + 1, y);
@@ -82,11 +90,11 @@ export class FillManager {
         });
     }
 
-    hexToRgba(hex) {
+    hexToRgba(hex, opacity = 1) {
         const r = parseInt(hex.slice(1, 3), 16);
         const g = parseInt(hex.slice(3, 5), 16);
         const b = parseInt(hex.slice(5, 7), 16);
-        return [r, g, b, 255];
+        return [r, g, b, Math.round(opacity * 255)];
     }
 
     colorMatch(r, g, b, a, target) {

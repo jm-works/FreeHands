@@ -3,6 +3,8 @@ import { ColorManager } from './modules/ColorManager.js';
 
 document.addEventListener('DOMContentLoaded', () => {
 
+    document.addEventListener('contextmenu', (e) => e.preventDefault());
+
     const canvasManager = new CanvasManager('drawing-canvas');
     const colorManager = new ColorManager('color-wheel-canvas', (color) => {
         canvasManager.setBrushColor(color);
@@ -57,7 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     syncControls(opacitySlider, opacityInput, (val) => {
-        console.log("Opacity Update:", val, "%");
+        canvasManager.setBrushOpacity(val);
     });
 
     syncControls(toleranceSlider, toleranceInput, (val) => {

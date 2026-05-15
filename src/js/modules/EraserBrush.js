@@ -109,7 +109,8 @@ export const EraserBrush = fabric.util.createClass(fabric.BaseBrush, {
             evented: false,
             objectCaching: false,
             fillRule: 'nonzero',
-            globalCompositeOperation: 'destination-out'
+            globalCompositeOperation: 'destination-out',
+            isEraser: true
         });
 
         this.canvas.add(path);

@@ -1,22 +1,16 @@
 :root {
-    /* Background */
     --bg-app: #31363b;
     --bg-panel: #232629;
     --bg-workspace: #1d2023;
     --bg-canvas: #ffffff;
-
-    /* Text & border */
     --text-primary: #eff0f1;
     --text-secondary: #7f8c8d;
     --border-color: #4d5057;
     --accent-color: #3daee9;
-
-    /* Height & Width */
     --menu-height: 28px;
     --toolbar-height: 40px;
     --statusbar-height: 24px;
     --sidebar-width: 260px;
-
     --font-primary: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
@@ -37,12 +31,13 @@ body {
 .app-container {
     display: flex;
     flex-direction: column;
-    height: 100%;
+    height: 100vh;
+    overflow: hidden;
 }
 
 .main-workspace {
     display: flex;
-    flex-grow: 1;
+    flex: 1 1 0;
     overflow: hidden;
 }
 
@@ -57,7 +52,12 @@ body {
 }
 
 .workspace-area .canvas-container {
-    background-color: var(--bg-canvas);
+    background-color: #e0e0e0;
+    background-image:
+        linear-gradient(45deg, #c0c0c0 25%, transparent 25%, transparent 75%, #c0c0c0 75%, #c0c0c0),
+        linear-gradient(45deg, #c0c0c0 25%, transparent 25%, transparent 75%, #c0c0c0 75%, #c0c0c0);
+    background-size: 20px 20px;
+    background-position: 0 0, 10px 10px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
     cursor: crosshair;
 }
@@ -67,10 +67,8 @@ body {
     pointer-events: none;
     z-index: 9999;
     border-radius: 50%;
-
     border: 1px solid rgba(0, 0, 0, 0.5);
     box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.5);
-
     background-color: transparent;
     transform: translate(-50%, -50%);
     display: none;
