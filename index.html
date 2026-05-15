@@ -5,6 +5,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FreeHands - A Drawing WebApp</title>
+    <link rel="shortcut icon" href="src/assets/logo/Icon.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Special+Elite&family=Oswald:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="src/css/bodyStyle.css">
     <link rel="stylesheet" href="src/css/toolbarStyle.css">
     <link rel="stylesheet" href="src/css/menuStyle.css">
@@ -12,16 +16,52 @@
     <link rel="stylesheet" href="src/css/paletteStyle.css">
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+
+    <style>
+        .app-logo {
+            display: flex;
+            align-items: baseline;
+            gap: 0;
+            margin-right: 18px;
+            padding-right: 18px;
+            border-right: 1px solid var(--border-strong);
+            user-select: none;
+        }
+
+        .app-logo-text {
+            font-family: 'Playfair Display', Georgia, serif;
+            font-size: 1rem;
+            font-weight: 900;
+            color: var(--text-primary);
+            letter-spacing: 0.02em;
+            line-height: 1;
+        }
+
+        .app-logo-text span {
+            color: var(--accent-color);
+        }
+
+        .app-logo-tagline {
+            display: none;
+        }
+
+        .menu-divider {
+            width: 1px;
+            height: 14px;
+            background: var(--border-strong);
+            margin: 0 4px;
+        }
+    </style>
 </head>
 
 <body>
     <div class="app-container">
         <nav class="menu-bar">
+            <div class="app-logo">
+                <span class="app-logo-text">Free<span>Hands</span></span>
+            </div>
             <div class="menu-item">File</div>
             <div class="menu-item">Edit</div>
-            <div class="menu-item">View</div>
-            <div class="menu-item">Image</div>
-            <div class="menu-item">Layer</div>
         </nav>
 
         <header class="toolbar">
@@ -68,7 +108,7 @@
         <div class="main-workspace">
 
             <aside class="sidebar left-sidebar">
-                <div class="docker-title" style="text-align: center; font-size: 0.7rem;">Tools</div>
+                <div class="docker-title" style="text-align: center; font-size: 0.6rem; padding: 6px 4px;">Tools</div>
                 <div class="docker-content toolbox-grid">
 
                     <button class="tool-btn active" id="btn-brush" title="Brush">
@@ -87,7 +127,7 @@
                         <img src="src/assets/icons/Toolbar/Fill.svg" alt="Fill" width="22" height="22">
                     </button>
 
-                    <div style="height: 1px; background: var(--border-color); width: 80%; margin: 5px 0;"></div>
+                    <div style="height: 1px; background: var(--border-color); width: 70%; margin: 4px 0;"></div>
 
                     <button class="tool-btn" id="btn-pan" title="Pan">
                         <img src="src/assets/icons/Toolbar/hand.svg" alt="Pan" width="22" height="22">
@@ -114,7 +154,7 @@
                 </div>
 
                 <div class="docker" style="flex-grow: 0; height: 150px;">
-                    <div class="docker-title">Color palette</div>
+                    <div class="docker-title">Color Palette</div>
                     <div class="docker-content" style="overflow-y: auto;">
                         <div id="color-palette" class="palette-grid">
                         </div>
@@ -124,7 +164,7 @@
                 <div class="docker">
                     <div class="docker-title">Layers</div>
                     <div class="docker-content" id="layers-list">
-                        <div style="font-style: italic; opacity: 0.5;">Layer 1 (Background)</div>
+                        <div style="font-style: italic; opacity: 0.5; font-family: var(--font-mono); font-size: 0.78rem;">Layer 1 (Background)</div>
                     </div>
                 </div>
             </aside>
@@ -135,7 +175,7 @@
             <div class="status-left">Ready</div>
             <div class="status-right">
                 <span>800 x 600 px</span>
-                <span>RGB (8-bit)</span>
+                <span>RGB / 8-bit</span>
                 <span id="zoom-val-display">Zoom: 100%</span>
             </div>
         </footer>

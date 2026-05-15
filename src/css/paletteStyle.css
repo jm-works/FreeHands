@@ -3,62 +3,66 @@
     flex-direction: column;
     align-items: center;
     gap: 10px;
-    padding: 15px !important;
+    padding: 14px !important;
 }
 
 #color-wheel-canvas {
     cursor: crosshair;
     max-width: 100%;
+    filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.7));
 }
 
 .current-color-display {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 15px;
+    gap: 12px;
     width: 100%;
-    background-color: rgba(0, 0, 0, 0.2);
-    padding: 8px;
-    border-radius: 4px;
-    border: 1px solid var(--border-color);
+    background-color: var(--ink-dark);
+    padding: 7px 10px;
+    border-radius: 2px;
+    border: 1px solid var(--border-strong);
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.6);
 }
 
 #active-color-preview {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    border: 2px solid var(--text-primary);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    width: 32px;
+    height: 32px;
+    border-radius: 2px;
+    border: 1px solid var(--border-strong);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.1);
     background-color: #000;
 }
 
 #color-hex-code {
-    font-family: monospace;
-    font-size: 1rem;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
     font-weight: bold;
     color: var(--text-primary);
     text-transform: uppercase;
+    letter-spacing: 0.08em;
 }
 
 .palette-grid {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
-    gap: 6px;
-    padding: 5px;
+    gap: 5px;
+    padding: 4px;
 }
 
 .palette-color {
     aspect-ratio: 1 / 1;
-    border-radius: 3px;
+    border-radius: 2px;
     cursor: pointer;
-    border: 1px solid rgba(0, 0, 0, 0.5);
-    transition: transform 0.1s ease, border-color 0.1s ease;
+    border: 1px solid rgba(0, 0, 0, 0.6);
+    transition: transform 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .palette-color:hover {
-    transform: scale(1.15);
+    transform: scale(1.18);
     border-color: var(--text-primary);
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.7), 0 0 0 1px var(--accent-color);
     z-index: 2;
 }
 

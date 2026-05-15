@@ -1,17 +1,29 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Special+Elite&family=Oswald:wght@400;600;700&display=swap');
+
 :root {
-    --bg-app: #31363b;
-    --bg-panel: #232629;
-    --bg-workspace: #1d2023;
+    --bg-app: #111111;
+    --bg-panel: #1a1a1a;
+    --bg-workspace: #0d0d0d;
     --bg-canvas: #ffffff;
-    --text-primary: #eff0f1;
-    --text-secondary: #7f8c8d;
-    --border-color: #4d5057;
-    --accent-color: #3daee9;
-    --menu-height: 28px;
-    --toolbar-height: 40px;
-    --statusbar-height: 24px;
+    --text-primary: #e0e0e0;
+    --text-secondary: #808080;
+    --text-accent: #a0a0a0;
+    --border-color: #2a2a2a;
+    --border-strong: #404040;
+
+    --accent-color: #c0392b;
+    --accent-dim: #7a1f18;
+    --accent-gold: #5a5a5a;
+
+    --ink-dark: #050505;
+
+    --menu-height: 30px;
+    --toolbar-height: 46px;
+    --statusbar-height: 26px;
     --sidebar-width: 260px;
-    --font-primary: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    --font-display: 'Playfair Display', Georgia, serif;
+    --font-mono: 'Special Elite', 'Courier New', monospace;
+    --font-ui: 'Oswald', 'Arial Narrow', sans-serif;
 }
 
 * {
@@ -21,11 +33,13 @@
 }
 
 body {
-    font-family: var(--font-primary);
+    font-family: var(--font-ui);
     background-color: var(--bg-app);
     color: var(--text-primary);
     height: 100vh;
     overflow: hidden;
+    background-image:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='4' height='4' fill='%23111111'/%3E%3Ccircle cx='1' cy='1' r='0.6' fill='%23080808' opacity='0.5'/%3E%3Ccircle cx='3' cy='3' r='0.6' fill='%23080808' opacity='0.5'/%3E%3C/svg%3E");
 }
 
 .app-container {
@@ -44,6 +58,10 @@ body {
 .workspace-area {
     flex-grow: 1;
     background-color: var(--bg-workspace);
+    background-image:
+        radial-gradient(ellipse at 20% 20%, rgba(192, 57, 43, 0.05) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 80%, rgba(255, 255, 255, 0.02) 0%, transparent 60%),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='3' height='3'%3E%3Crect width='3' height='3' fill='%230d0d0d'/%3E%3Ccircle cx='0.5' cy='0.5' r='0.4' fill='%23050505' opacity='0.6'/%3E%3C/svg%3E");
     display: flex;
     justify-content: center;
     align-items: center;
@@ -52,13 +70,17 @@ body {
 }
 
 .workspace-area .canvas-container {
-    background-color: #e0e0e0;
+    background-color: #d0d0d0;
     background-image:
-        linear-gradient(45deg, #c0c0c0 25%, transparent 25%, transparent 75%, #c0c0c0 75%, #c0c0c0),
-        linear-gradient(45deg, #c0c0c0 25%, transparent 25%, transparent 75%, #c0c0c0 75%, #c0c0c0);
+        linear-gradient(45deg, #c0c0c0 25%, transparent 25%, transparent 75%, #c0c0c0 75%),
+        linear-gradient(45deg, #c0c0c0 25%, transparent 25%, transparent 75%, #c0c0c0 75%);
     background-size: 20px 20px;
     background-position: 0 0, 10px 10px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
+    box-shadow:
+        0 0 0 2px var(--border-strong),
+        0 0 0 4px var(--ink-dark),
+        0 8px 40px rgba(0, 0, 0, 0.9),
+        0 2px 8px rgba(0, 0, 0, 0.6);
     cursor: crosshair;
 }
 
@@ -67,8 +89,8 @@ body {
     pointer-events: none;
     z-index: 9999;
     border-radius: 50%;
-    border: 1px solid rgba(0, 0, 0, 0.5);
-    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.5);
+    border: 1.5px solid rgba(192, 57, 43, 0.7);
+    box-shadow: 0 0 0 1px rgba(232, 223, 200, 0.3);
     background-color: transparent;
     transform: translate(-50%, -50%);
     display: none;

@@ -9,12 +9,14 @@
     border-right: 1px solid var(--border-color);
     width: 54px;
     background-color: var(--bg-panel);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='2' height='2'%3E%3Crect width='2' height='2' fill='transparent'/%3E%3Ccircle cx='1' cy='1' r='0.4' fill='%23ffffff' opacity='0.012'/%3E%3C/svg%3E");
 }
 
 .right-sidebar {
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    border-left: 1px solid var(--border-color);
 }
 
 .right-sidebar .docker:last-child {
@@ -31,91 +33,130 @@
 }
 
 .docker-title {
-    background-color: var(--bg-app);
-    padding: 5px 10px;
-    font-size: 0.8rem;
-    font-weight: bold;
+    background: linear-gradient(to right, var(--ink-dark), rgba(10, 9, 7, 0.7));
+    padding: 5px 12px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    font-family: var(--font-ui);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
     border-bottom: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    position: relative;
+    overflow: hidden;
+}
+
+.docker-title::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--accent-color);
 }
 
 .docker-content {
     padding: 10px;
-    font-size: 0.85rem;
+    font-size: 0.82rem;
     color: var(--text-secondary);
 }
 
 .layer-toolbar {
     display: flex;
     justify-content: space-between;
-    padding: 6px;
-    background-color: var(--bg-app);
+    padding: 5px 8px;
+    background-color: rgba(10, 9, 7, 0.6);
     border-bottom: 1px solid var(--border-color);
     flex-shrink: 0;
 }
 
 .layer-btn {
     background: none;
-    border: 1px solid transparent;
-    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    color: var(--text-accent);
     cursor: pointer;
-    border-radius: 4px;
-    padding: 4px 8px;
-    font-size: 1rem;
+    border-radius: 2px;
+    padding: 3px 8px;
+    font-size: 0.85rem;
+    font-family: var(--font-ui);
+    font-weight: 600;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background 0.15s;
+    transition: all 0.15s;
+    letter-spacing: 0.04em;
 }
 
 .layer-btn:hover {
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: rgba(192, 57, 43, 0.15);
+    border-color: var(--accent-color);
+    color: var(--text-primary);
 }
 
 .layer-btn img {
-    width: 16px;
-    height: 16px;
-    filter: invert(1);
+    width: 14px;
+    height: 14px;
+    filter: invert(0.7) sepia(0.2);
     pointer-events: none;
+}
+
+.layer-btn:hover img {
+    filter: invert(0.9);
 }
 
 .layer-opacity-container {
     display: flex;
     align-items: center;
     background-color: var(--bg-panel);
-    padding: 6px 10px;
-    font-size: 0.8rem;
+    padding: 5px 10px;
+    font-size: 0.72rem;
     gap: 8px;
-    border-bottom: 1px solid var(--bg-workspace);
+    border-bottom: 1px solid var(--border-color);
     flex-shrink: 0;
+    font-family: var(--font-ui);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
 }
 
 .layer-opacity-container label {
-    color: var(--text-primary);
-    font-weight: 500;
+    color: var(--text-secondary);
+    font-weight: 600;
 }
 
 #layer-opacity-slider {
     flex-grow: 1;
     cursor: ew-resize;
-    accent-color: var(--text-primary);
-    height: 4px;
+    accent-color: var(--accent-color);
+    height: 3px;
 }
 
 #layer-opacity-label {
     min-width: 35px;
     text-align: right;
     font-variant-numeric: tabular-nums;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--text-accent);
 }
 
 .layer-blend-select {
-    background-color: var(--bg-workspace);
-    color: var(--text-primary);
-    border: 1px solid var(--border-color);
-    border-radius: 3px;
-    padding: 2px;
-    font-size: 0.75rem;
+    background-color: var(--ink-dark);
+    color: var(--text-accent);
+    border: 1px solid var(--border-strong);
+    border-radius: 2px;
+    padding: 2px 4px;
+    font-size: 0.68rem;
+    font-family: var(--font-ui);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
     outline: none;
     max-width: 80px;
+    cursor: pointer;
+}
+
+.layer-blend-select:focus {
+    border-color: var(--accent-color);
 }
 
 #layers-list {
@@ -133,41 +174,50 @@
     flex-direction: column;
 }
 
-.layer-list-container::-webkit-scrollbar {
-    width: 8px;
+.layer-list-container::-webkit-scrollbar,
+.docker-content::-webkit-scrollbar {
+    width: 6px;
 }
 
-.layer-list-container::-webkit-scrollbar-track {
-    background: var(--bg-workspace);
+.layer-list-container::-webkit-scrollbar-track,
+.docker-content::-webkit-scrollbar-track {
+    background: var(--ink-dark);
 }
 
-.layer-list-container::-webkit-scrollbar-thumb {
-    background: var(--border-color);
-    border-radius: 4px;
+.layer-list-container::-webkit-scrollbar-thumb,
+.docker-content::-webkit-scrollbar-thumb {
+    background: var(--border-strong);
+    border-radius: 0;
 }
 
-.layer-list-container::-webkit-scrollbar-thumb:hover {
-    background: var(--text-secondary);
+.layer-list-container::-webkit-scrollbar-thumb:hover,
+.docker-content::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-dim);
 }
 
 .layer-item {
     display: flex;
     align-items: center;
-    padding: 8px 12px;
+    padding: 7px 10px;
     cursor: pointer;
-    border-bottom: 1px solid var(--bg-workspace);
-    gap: 12px;
-    font-size: 0.85rem;
+    border-bottom: 1px solid rgba(58, 50, 40, 0.5);
+    gap: 10px;
+    font-size: 0.78rem;
+    font-family: var(--font-ui);
+    letter-spacing: 0.04em;
     transition: background-color 0.1s;
+    color: var(--text-secondary);
 }
 
 .layer-item.active {
-    background-color: color-mix(in srgb, var(--accent-color) 25%, var(--bg-panel));
-    border-left: 3px solid var(--accent-color);
+    background-color: rgba(192, 57, 43, 0.15);
+    border-left: 2px solid var(--accent-color);
+    color: var(--text-primary);
 }
 
 .layer-item:hover:not(.active) {
-    background-color: var(--bg-app);
+    background-color: rgba(255, 255, 255, 0.03);
+    color: var(--text-accent);
 }
 
 .layer-icon {
@@ -176,20 +226,24 @@
     align-items: center;
     justify-content: center;
     user-select: none;
-    transition: transform 0.1s;
-    width: 18px;
-    height: 18px;
+    transition: transform 0.1s, opacity 0.1s;
+    width: 16px;
+    height: 16px;
 }
 
 .layer-icon img {
     width: 100%;
     height: 100%;
-    filter: invert(1);
+    filter: invert(0.6) sepia(0.1);
     pointer-events: none;
 }
 
 .layer-icon:hover {
-    transform: scale(1.15);
+    transform: scale(1.2);
+}
+
+.layer-icon:hover img {
+    filter: invert(0.9);
 }
 
 .layer-name {
@@ -203,36 +257,44 @@
 
 .layer-rename-input {
     flex-grow: 1;
-    background-color: var(--bg-workspace);
+    background-color: var(--ink-dark);
     color: var(--text-primary);
     border: 1px solid var(--accent-color);
-    border-radius: 3px;
-    padding: 2px 4px;
-    font-family: inherit;
-    font-size: 0.85rem;
+    border-radius: 2px;
+    padding: 2px 6px;
+    font-family: var(--font-ui);
+    font-size: 0.78rem;
     outline: none;
     width: 100%;
+    letter-spacing: 0.04em;
 }
 
 .layer-context-menu {
     position: fixed;
     background-color: var(--bg-panel);
-    border: 1px solid var(--border-color);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-    border-radius: 4px;
+    border: 1px solid var(--border-strong);
+    border-top: 2px solid var(--accent-color);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.8), 4px 4px 0 rgba(0, 0, 0, 0.4);
+    border-radius: 0;
     padding: 4px 0;
     z-index: 9999;
-    min-width: 150px;
+    min-width: 160px;
 }
 
 .layer-context-menu-item {
-    padding: 6px 12px;
-    font-size: 0.85rem;
+    padding: 6px 14px;
+    font-size: 0.75rem;
+    font-family: var(--font-ui);
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
     cursor: pointer;
-    color: var(--text-primary);
+    color: var(--text-accent);
+    transition: all 0.1s;
 }
 
 .layer-context-menu-item:hover {
     background-color: var(--accent-color);
-    color: #ffffff;
+    color: var(--text-primary);
+    padding-left: 18px;
 }
