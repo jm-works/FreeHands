@@ -16,6 +16,10 @@ export class HistoryManager {
         };
 
         this.undoStack.push(JSON.stringify(state));
+        if (this.undoStack.length > 20) {
+            this.undoStack.shift();
+        }
+
         this.redoStack = [];
     }
 
