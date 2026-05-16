@@ -6,6 +6,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.addEventListener('contextmenu', (e) => e.preventDefault());
 
+    const tapSound = new Audio('src/assets/sound/tap.mp3');
+
+    document.addEventListener('mousedown', (e) => {
+        const elementosInterativos = 'button, .menu-item, input, select, .palette-color, .layer-item, .layer-icon, .layer-context-menu-item';
+        if (e.target.closest(elementosInterativos)) {
+            tapSound.currentTime = 0;
+            tapSound.play().catch(() => { });
+        }
+    });
+
     const introManager = new IntroManager('fh-root', 'fh-c');
 
     const canvasManager = new CanvasManager('drawing-canvas');
