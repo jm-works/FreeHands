@@ -2,6 +2,7 @@ export class PromptModal {
     constructor() {
         this.overlay = document.createElement('div');
         this.overlay.className = 'custom-modal-overlay';
+        this.overlay.style.zIndex = '100000';
 
         this.modal = document.createElement('div');
         this.modal.className = 'custom-modal';
@@ -38,8 +39,16 @@ export class PromptModal {
         this.btnConfirm.onclick = () => this.close(this.inputEl.value);
 
         this.inputEl.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') this.close(this.inputEl.value);
-            if (e.key === 'Escape') this.close(null);
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                e.stopPropagation();
+                this.close(this.inputEl.value);
+            }
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                e.stopPropagation();
+                this.close(null);
+            }
         });
     }
 
@@ -47,14 +56,20 @@ export class PromptModal {
         this.messageEl.textContent = message;
         this.inputEl.value = defaultValue;
         this.callback = callback;
-        this.overlay.style.display = 'flex';
-        this.inputEl.focus();
-        this.inputEl.select();
+        setTimeout(() => {
+            this.overlay.style.display = 'flex';
+            this.inputEl.focus();
+            this.inputEl.select();
+        }, 10);
     }
 
     close(value) {
         this.overlay.style.display = 'none';
-        if (this.callback) this.callback(value);
+        if (this.callback) {
+            setTimeout(() => {
+                this.callback(value);
+            }, 10);
+        }
     }
 }
 

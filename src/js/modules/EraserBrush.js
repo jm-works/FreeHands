@@ -1,5 +1,56 @@
 import { getStroke } from "https://esm.sh/perfect-freehand";
 
+function getBoundsFromImageData(imgData) {
+    const width = imgData.width;
+    const height = imgData.height;
+    const data = imgData.data;
+    let minX = width, minY = height, maxX = 0, maxY = 0;
+    let hasPixels = false;
+
+    for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+            const alpha = data[(y * width + x) * 4 + 3];
+            if (alpha > 5) {
+                if (x < minX) minX = x;
+                if (x > maxX) maxX = x;
+                if (y < minY) minY = y;
+                if (y > maxY) maxY = y;
+                hasPixels = true;
+            }
+        }
+    }
+
+    if (!hasPixels) return null;
+
+    return {
+        left: minX,
+        top: minY,
+        width: maxX - minX + 1,
+        height: maxY - minY + 1
+    };
+}
+
+function checkIntersection(bbox1, bbox2) {
+    return (
+        bbox1.left < bbox2.left + bbox2.width &&
+        bbox1.left + bbox1.width > bbox2.left &&
+        bbox1.top < bbox2.top + bbox2.height &&
+        bbox1.top + bbox1.height > bbox2.top
+    );
+}
+
+const cloneObjectAsync = (obj) => {
+    return new Promise((resolve) => {
+        obj.clone((cloned) => resolve(cloned));
+    });
+};
+
+const createImageAsync = (url) => {
+    return new Promise((resolve) => {
+        fabric.Image.fromURL(url, (img) => resolve(img));
+    });
+};
+
 export const EraserBrush = fabric.util.createClass(fabric.BaseBrush, {
     initialize: function (canvas) {
         this.canvas = canvas;
@@ -96,13 +147,13 @@ export const EraserBrush = fabric.util.createClass(fabric.BaseBrush, {
         ctx.restore();
     },
 
-    createPath: function () {
+    createPath: async function () {
         if (this.points.length < 2) return;
         const stroke = getStroke(this.points, this.getStrokeOptions(true));
         if (!stroke || stroke.length === 0) return;
 
         const pathData = this.getSvgPathFromStroke(stroke);
-        const path = new fabric.Path(pathData, {
+        const eraserPath = new fabric.Path(pathData, {
             fill: '#000000',
             stroke: null,
             selectable: false,
@@ -113,8 +164,88 @@ export const EraserBrush = fabric.util.createClass(fabric.BaseBrush, {
             isEraser: true
         });
 
-        this.canvas.add(path);
-        this.canvas.fire('path:created', { path: path });
-        this.canvas.requestRenderAll();
+        const canvas = this.canvas;
+        const activeLayerId = canvas.layerManager ? canvas.layerManager.activeLayerId : null;
+
+        const objects = canvas.getObjects().filter(obj =>
+            (activeLayerId ? obj.layerId === activeLayerId : true) &&
+            !obj.isEraser &&
+            obj.type !== 'rect'
+        );
+
+        const eraserBbox = eraserPath.getBoundingRect();
+        const intersectingObjects = objects.filter(obj => checkIntersection(obj.getBoundingRect(), eraserBbox));
+
+        if (intersectingObjects.length === 0) return;
+
+        for (const obj of intersectingObjects) {
+            const objBbox = obj.getBoundingRect();
+            const pad = 10;
+            const cWidth = objBbox.width + pad * 2;
+            const cHeight = objBbox.height + pad * 2;
+
+            const staticCanvas = new fabric.StaticCanvas(null, {
+                width: cWidth,
+                height: cHeight,
+                enableRetinaScaling: false
+            });
+
+            staticCanvas.viewportTransform = [1, 0, 0, 1, -objBbox.left + pad, -objBbox.top + pad];
+
+            const clonedObj = await cloneObjectAsync(obj);
+            staticCanvas.add(clonedObj);
+
+            const clonedEraser = await cloneObjectAsync(eraserPath);
+            clonedEraser.set({ globalCompositeOperation: 'destination-out' });
+            staticCanvas.add(clonedEraser);
+
+            staticCanvas.renderAll();
+
+            const ctx = staticCanvas.getContext();
+            const imgData = ctx.getImageData(0, 0, cWidth, cHeight);
+            const bounds = getBoundsFromImageData(imgData);
+
+            const currentIndex = canvas.getObjects().indexOf(obj);
+
+            if (!bounds) {
+                if (currentIndex > -1) canvas.remove(obj);
+            } else {
+                const croppedCanvas = document.createElement('canvas');
+                croppedCanvas.width = bounds.width;
+                croppedCanvas.height = bounds.height;
+                const croppedCtx = croppedCanvas.getContext('2d');
+
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = cWidth;
+                tempCanvas.height = cHeight;
+                tempCanvas.getContext('2d').putImageData(imgData, 0, 0);
+
+                croppedCtx.drawImage(tempCanvas, bounds.left, bounds.top, bounds.width, bounds.height, 0, 0, bounds.width, bounds.height);
+
+                const img = await createImageAsync(croppedCanvas.toDataURL());
+
+                img.set({
+                    left: objBbox.left - pad + bounds.left,
+                    top: objBbox.top - pad + bounds.top,
+                    layerId: obj.layerId,
+                    selectable: false,
+                    evented: false,
+                    opacity: obj.opacity || 1,
+                    globalCompositeOperation: obj.globalCompositeOperation || 'source-over'
+                });
+
+                if (currentIndex > -1) {
+                    canvas.remove(obj);
+                    canvas.insertAt(img, currentIndex, false);
+                } else {
+                    canvas.add(img);
+                }
+            }
+        }
+
+        canvas.requestRenderAll();
+        if (canvas.historyManager) {
+            canvas.historyManager.saveState();
+        }
     }
 });

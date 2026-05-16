@@ -24,7 +24,8 @@ export class LayerManager {
             fill: '#ffffff',
             selectable: false,
             evented: false,
-            layerId: this.activeLayerId
+            layerId: this.activeLayerId,
+            isBg: true
         });
         this.canvas.add(bgRect);
         this.canvasManager.historyManager.undoStack = [];

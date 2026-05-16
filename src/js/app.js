@@ -56,6 +56,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
     topMenuManager.registerMenu('menu-edit', [
         {
+            label: 'BG Size',
+            action: () => {
+                promptModal.show('Width x Height (e.g. 1920x1080):', `${canvasManager.canvas.width}x${canvasManager.canvas.height}`, (val) => {
+                    if (!val) return;
+                    const parts = val.toLowerCase().split('x');
+                    if (parts.length === 2) {
+                        const w = parseInt(parts[0].trim(), 10);
+                        const h = parseInt(parts[1].trim(), 10);
+                        if (!isNaN(w) && !isNaN(h) && w > 0 && h > 0) {
+                            if (w > 1920 || h > 1080) {
+                                alert('Maximum size allowed is 1920x1080px!');
+                                return;
+                            }
+                            canvasManager.resizeCanvas(w, h);
+                            const sizeDisplay = document.getElementById('canvas-size-display');
+                            if (sizeDisplay) {
+                                sizeDisplay.textContent = `${w} x ${h} px`;
+                            }
+                        } else {
+                            alert('Invalid dimensions!');
+                        }
+                    }
+                });
+            }
+        },
+        {
             label: 'Add Filter',
             action: () => {
                 console.log('Action: Add Filter - Irei Fazer algo aqui depois');

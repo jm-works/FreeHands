@@ -495,7 +495,7 @@ export class CanvasManager {
             this.canvas.getObjects().forEach(obj => {
                 let canSelect = true;
 
-                if (obj.type === 'rect') canSelect = false;
+                if (obj.type === 'rect' || obj.isEraser) canSelect = false;
 
                 if (this.layerManager && canSelect) {
                     const layer = this.layerManager.layers.find(l => l.id === obj.layerId);
@@ -546,6 +546,22 @@ export class CanvasManager {
         this.brushOpacity = opacity / 100;
         if ((this.currentTool === 'brush' || this.currentTool === 'pen') && this.canvas.freeDrawingBrush) {
             this.canvas.freeDrawingBrush.color = this.getBrushColorAsRGBA();
+        }
+    }
+
+    resizeCanvas(width, height) {
+        this.canvas.setWidth(width);
+        this.canvas.setHeight(height);
+        this.canvas.calcOffset();
+
+        const bgRect = this.canvas.getObjects().find(obj => obj.isBg);
+        if (bgRect) {
+            bgRect.set({ width: width, height: height });
+        }
+
+        this.canvas.requestRenderAll();
+        if (this.historyManager) {
+            this.historyManager.saveState();
         }
     }
 }
