@@ -46,17 +46,18 @@ export class IntroManager {
                 this.audio.play().catch(() => { });
                 this.phase = 'scene0';
                 this.phaseT = 0;
-            }
-        };
-
-        this.root.addEventListener('click', () => {
-            startInteraction();
-            if (this.phase === 'idle') {
+            } else if (['scene0', 'scene1', 'scene2', 'tv_on'].includes(this.phase)) {
+                this.audio.pause();
+                this.audio.currentTime = 0;
+                this.phase = 'logo';
+                this.phaseT = 0;
+            } else if (this.phase === 'idle') {
                 this.phase = 'shutoff';
                 this.shutT = 0;
             }
-        });
+        };
 
+        this.root.addEventListener('mousedown', startInteraction);
         window.addEventListener('keydown', startInteraction);
 
         this.tick = this.tick.bind(this);
@@ -202,12 +203,12 @@ export class IntroManager {
     }
 
     drawScene1(t) {
-        this.ctx.fillStyle = '#050505';
+        this.ctx.fillStyle = '#151515';
         this.ctx.fillRect(0, 0, this.W, this.H);
 
         if (t > 100) {
             const a = this.eo(this.nm(t, 100, 400));
-            this.rule(this.H * 0.5 - 42, this.W * 0.14, this.W * 0.86, '#2a2a2a', a * 0.5);
+            this.rule(this.H * 0.5 - 42, this.W * 0.14, this.W * 0.86, '#3a3a3a', a * 0.5);
             this.ctx.save();
             this.ctx.globalAlpha = a;
             this.ctx.save();
@@ -215,23 +216,23 @@ export class IntroManager {
             this.txt('NEW YORK', this.W / 2, this.H * 0.5 + 2, 65, '700', 'Oswald', '#ccc4b0', 1, 'center', '0.18em');
             this.ctx.restore();
             this.ctx.restore();
-            this.rule(this.H * 0.5 + 32, this.W * 0.14, this.W * 0.86, '#2a2a2a', a * 0.5);
+            this.rule(this.H * 0.5 + 32, this.W * 0.14, this.W * 0.86, '#3a3a3a', a * 0.5);
         }
     }
 
     drawScene2(t) {
-        this.ctx.fillStyle = '#060606';
+        this.ctx.fillStyle = '#181818';
         this.ctx.fillRect(0, 0, this.W, this.H);
         const sceneA = this.eo(this.nm(t, 0, 300));
 
         this.ctx.save();
         this.ctx.globalAlpha = sceneA * 0.9;
-        this.ctx.fillStyle = '#080808';
+        this.ctx.fillStyle = '#222222';
         this.ctx.fillRect(0, this.H * 0.22, this.W * 0.22, this.H);
         this.ctx.fillRect(this.W * 0.05, this.H * 0.12, this.W * 0.12, this.H);
         this.ctx.fillRect(this.W * 0.72, this.H * 0.10, this.W * 0.28, this.H);
         this.ctx.fillRect(this.W * 0.80, this.H * 0.06, this.W * 0.14, this.H);
-        this.ctx.fillStyle = '#050505';
+        this.ctx.fillStyle = '#1a1a1a';
         this.ctx.fillRect(this.W * 0.38, this.H * 0.35, this.W * 0.24, this.H);
         this.ctx.restore();
 
@@ -250,51 +251,72 @@ export class IntroManager {
         this.ctx.restore();
 
         this.ctx.save();
-        this.ctx.globalAlpha = sceneA * 0.18;
+        this.ctx.globalAlpha = sceneA * 0.6;
+        const fog = this.ctx.createLinearGradient(0, this.H * 0.4, 0, this.H);
+        fog.addColorStop(0, 'rgba(24, 24, 24, 0)');
+        fog.addColorStop(1, 'rgba(10, 10, 10, 0.95)');
+        this.ctx.fillStyle = fog;
+        this.ctx.fillRect(0, this.H * 0.4, this.W, this.H * 0.6);
+        this.ctx.restore();
+
+        this.ctx.save();
+        this.ctx.globalAlpha = sceneA * 0.35;
         this.ctx.strokeStyle = '#8899bb';
-        this.ctx.lineWidth = 0.7;
-        for (let i = 0; i < 80; i++) {
+        this.ctx.lineWidth = 1.2;
+        for (let i = 0; i < 110; i++) {
             const sx = ((i * 137.508) % 1) * this.W;
-            const sy = ((i * 73.311) % 1) * this.H;
+            const sy = ((i * 73.311 + t * 0.12) % 1) * this.H;
             this.ctx.beginPath();
             this.ctx.moveTo(sx, sy);
-            this.ctx.lineTo(sx - 3, sy + this.H * 0.055);
+            this.ctx.lineTo(sx - 5, sy + this.H * 0.05);
             this.ctx.stroke();
         }
         this.ctx.restore();
 
         this.ctx.save();
-        this.ctx.globalAlpha = sceneA * 0.2;
-        const ref = this.ctx.createLinearGradient(0, this.H * 0.78, 0, this.H);
-        ref.addColorStop(0, 'rgba(192,57,43,0.3)');
-        ref.addColorStop(1, 'rgba(0,0,0,0)');
-        this.ctx.fillStyle = ref;
-        this.ctx.fillRect(0, this.H * 0.78, this.W, this.H * 0.22);
-        this.ctx.restore();
+        this.ctx.globalAlpha = sceneA * 0.85;
 
-        this.ctx.save();
-        this.ctx.globalAlpha = sceneA * 0.8;
-        this.ctx.strokeStyle = '#1a1a1a';
-        this.ctx.lineWidth = 3;
+        this.ctx.strokeStyle = '#0f0f0f';
+        this.ctx.lineWidth = 5;
         this.ctx.beginPath();
-        this.ctx.moveTo(this.W * 0.36, this.H); this.ctx.lineTo(this.W * 0.36, this.H * 0.42); this.ctx.lineTo(this.W * 0.40, this.H * 0.38);
+        this.ctx.moveTo(this.W * 0.33, this.H);
+        this.ctx.lineTo(this.W * 0.33, this.H * 0.35);
+        this.ctx.lineTo(this.W * 0.38, this.H * 0.32);
         this.ctx.stroke();
-        const lg = this.ctx.createRadialGradient(this.W * 0.40, this.H * 0.38, 0, this.W * 0.40, this.H * 0.38, this.W * 0.14);
-        lg.addColorStop(0, 'rgba(255,220,120,0.13)');
+
+        const lg = this.ctx.createRadialGradient(this.W * 0.38, this.H * 0.32, 0, this.W * 0.38, this.H * 0.32, this.W * 0.35);
+        lg.addColorStop(0, 'rgba(255, 220, 130, 0.45)');
+        lg.addColorStop(0.15, 'rgba(255, 220, 130, 0.15)');
         lg.addColorStop(1, 'rgba(0,0,0,0)');
         this.ctx.fillStyle = lg;
-        this.ctx.fillRect(this.W * 0.26, this.H * 0.28, this.W * 0.28, this.H * 0.22);
+        this.ctx.fillRect(0, 0, this.W, this.H);
         this.ctx.restore();
 
         this.ctx.save();
-        this.ctx.globalAlpha = sceneA * 0.95;
-        this.ctx.fillStyle = '#030303';
-        const fx = this.W * 0.44, fy = this.H * 0.82;
-        this.ctx.beginPath(); this.ctx.ellipse(fx, fy - this.H * 0.09, this.W * 0.038, this.H * 0.11, 0, 0, Math.PI * 2); this.ctx.fill();
-        this.ctx.beginPath(); this.ctx.moveTo(fx - this.W * 0.038, fy - this.H * 0.01); this.ctx.lineTo(fx - this.W * 0.07, fy + this.H * 0.12); this.ctx.lineTo(fx + this.W * 0.07, fy + this.H * 0.12); this.ctx.lineTo(fx + this.W * 0.038, fy - this.H * 0.01); this.ctx.closePath(); this.ctx.fill();
-        this.ctx.beginPath(); this.ctx.ellipse(fx, fy - this.H * 0.235, this.W * 0.024, this.H * 0.06, 0, 0, Math.PI * 2); this.ctx.fill();
-        this.ctx.beginPath(); this.ctx.ellipse(fx, fy - this.H * 0.29, this.W * 0.038, this.H * 0.02, 0, 0, Math.PI * 2); this.ctx.fill();
-        this.ctx.fillRect(fx - this.W * 0.022, fy - this.H * 0.365, this.W * 0.044, this.H * 0.08);
+        this.ctx.globalAlpha = sceneA * 0.98;
+        this.ctx.fillStyle = '#050505';
+        const fx = this.W * 0.44, fy = this.H * 0.94;
+
+        this.ctx.beginPath();
+        this.ctx.ellipse(fx, fy - this.H * 0.36, this.W * 0.045, this.H * 0.012, 0, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        this.ctx.beginPath();
+        this.ctx.moveTo(fx - this.W * 0.03, fy - this.H * 0.36);
+        this.ctx.quadraticCurveTo(fx - this.W * 0.025, fy - this.H * 0.43, fx, fy - this.H * 0.42);
+        this.ctx.quadraticCurveTo(fx + this.W * 0.025, fy - this.H * 0.43, fx + this.W * 0.03, fy - this.H * 0.36);
+        this.ctx.fill();
+
+        this.ctx.beginPath();
+        this.ctx.moveTo(fx - this.W * 0.015, fy - this.H * 0.36);
+        this.ctx.quadraticCurveTo(fx - this.W * 0.05, fy - this.H * 0.30, fx - this.W * 0.055, fy - this.H * 0.25);
+        this.ctx.quadraticCurveTo(fx - this.W * 0.065, fy + this.H * 0.00, fx - this.W * 0.06, fy + this.H * 0.12);
+        this.ctx.lineTo(fx + this.W * 0.06, fy + this.H * 0.12);
+        this.ctx.quadraticCurveTo(fx + this.W * 0.065, fy + this.H * 0.00, fx + this.W * 0.055, fy - this.H * 0.26);
+        this.ctx.quadraticCurveTo(fx + this.W * 0.05, fy - this.H * 0.31, fx + this.W * 0.03, fy - this.H * 0.33);
+        this.ctx.lineTo(fx + this.W * 0.02, fy - this.H * 0.35);
+        this.ctx.closePath();
+        this.ctx.fill();
         this.ctx.restore();
 
         if (t > 400) {

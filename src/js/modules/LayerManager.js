@@ -25,6 +25,7 @@ export class LayerManager {
             layerId: this.activeLayerId
         });
         this.canvas.add(bgRect);
+        this.canvasManager.historyManager.undoStack = [];
         this.canvasManager.historyManager.saveState();
 
         document.addEventListener('click', () => this.closeContextMenu());
