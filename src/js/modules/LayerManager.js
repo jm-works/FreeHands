@@ -1,3 +1,5 @@
+import { promptModal } from './PromptModal.js';
+
 export class LayerManager {
     constructor(canvasManager) {
         this.canvasManager = canvasManager;
@@ -286,12 +288,13 @@ export class LayerManager {
     }
 
     promptRename(layer) {
-        const newName = prompt('Novo nome da camada:', layer.name);
-        if (newName && newName.trim() !== '') {
-            layer.name = newName.trim();
-            this.canvasManager.historyManager.saveState();
-            this.renderUI();
-        }
+        promptModal.show('New layer name:', layer.name, (newName) => {
+            if (newName && newName.trim() !== '') {
+                layer.name = newName.trim();
+                this.canvasManager.historyManager.saveState();
+                this.renderUI();
+            }
+        });
     }
 
     getLayersState() {

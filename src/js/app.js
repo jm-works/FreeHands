@@ -1,6 +1,8 @@
 import { CanvasManager } from './modules/CanvasManager.js';
 import { ColorManager } from './modules/ColorManager.js';
 import { IntroManager } from './modules/IntroManager.js';
+import { MenuManager } from './modules/MenuManager.js';
+import { promptModal } from './modules/PromptModal.js';
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -19,6 +21,56 @@ document.addEventListener('DOMContentLoaded', () => {
     const introManager = new IntroManager('fh-root', 'fh-c');
 
     const canvasManager = new CanvasManager('drawing-canvas');
+
+    const topMenuManager = new MenuManager(canvasManager);
+
+    topMenuManager.registerMenu('menu-file', [
+        {
+            label: 'Save Image',
+            action: () => {
+                promptModal.show('Enter the name to save the image:', 'FreeHands_Artwork', (fileName) => {
+                    if (fileName === null) return;
+                    if (fileName.trim() === '') {
+                        fileName = 'FreeHands_Artwork';
+                    }
+
+                    if (!fileName.toLowerCase().endsWith('.png')) {
+                        fileName += '.png';
+                    }
+
+                    const dataURL = canvasManager.canvas.toDataURL({
+                        format: 'png',
+                        quality: 1
+                    });
+
+                    const link = document.createElement('a');
+                    link.download = fileName;
+                    link.href = dataURL;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                });
+            }
+        }
+    ]);
+
+    topMenuManager.registerMenu('menu-edit', [
+        {
+            label: 'Add Filter',
+            action: () => {
+                console.log('Action: Add Filter - Irei Fazer algo aqui depois');
+                alert('Add Filter selected (to be implemented)');
+            }
+        },
+        {
+            label: 'Change Paper Texture',
+            action: () => {
+                console.log('Action: Change Texture - Irei Fazer algo aqui depois');
+                alert('Change Paper Texture selected (to be implemented)');
+            }
+        }
+    ]);
+
     const colorManager = new ColorManager('color-wheel-canvas', (color) => {
         canvasManager.setBrushColor(color);
     });
