@@ -109,7 +109,7 @@
     display: flex;
     align-items: center;
     background-color: var(--bg-panel);
-    padding: 5px 10px;
+    padding: 5px 5px;
     font-size: 0.72rem;
     gap: 8px;
     border-bottom: 1px solid var(--border-color);
