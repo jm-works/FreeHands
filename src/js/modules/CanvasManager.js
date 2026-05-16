@@ -54,6 +54,8 @@ export class CanvasManager {
         this.resizeStartPosX = 0;
         this.initialBrushSize = 0;
 
+        this.isAltPressed = false;
+
         this.onBrushSizeChange = null;
         this.onSpaceToggle = null;
 
@@ -64,6 +66,11 @@ export class CanvasManager {
 
         this.layerManager = new LayerManager(this);
         this.overrideRender();
+
+        this.virtualX = window.innerWidth / 2;
+        this.virtualY = window.innerHeight / 2;
+        this.activeArrowKeys = new Set();
+        this.keyboardDrawInterval = null;
     }
 
     init() {
@@ -136,8 +143,77 @@ export class CanvasManager {
         window.addEventListener('keydown', (e) => {
             const isCtrl = e.ctrlKey || e.metaKey;
             const isInput = e.target.tagName.toLowerCase() === 'input' || e.target.tagName.toLowerCase() === 'textarea';
+            const isArrow = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key);
 
-            if (isCtrl && e.key.toLowerCase() === 'z') {
+            if (isArrow && !isInput) {
+                const isDrawingTool = this.currentTool === 'brush' || this.currentTool === 'pen' || this.currentTool === 'eraser';
+                if (!isDrawingTool || !this.canvas.freeDrawingBrush) return;
+
+                e.preventDefault();
+
+                const wasEmpty = this.activeArrowKeys.size === 0;
+
+                this.activeArrowKeys.add(e.key);
+
+                if (wasEmpty) {
+                    this.canvas.isDrawingMode = true;
+
+                    const rect = this.board.getBoundingClientRect();
+
+                    const pointer = {
+                        x: (this.virtualX - rect.left) / this.zoom,
+                        y: (this.virtualY - rect.top) / this.zoom
+                    };
+
+                    this.canvas.freeDrawingBrush.onMouseDown(pointer, {
+                        e: {
+                            pointerType: 'mouse',
+                            pressure: 0.5
+                        }
+                    });
+
+                    this.keyboardDrawInterval = setInterval(() => {
+                        const step = this.isAltPressed ? 10 : 3;
+
+                        if (this.activeArrowKeys.has('ArrowUp')) this.virtualY -= step;
+                        if (this.activeArrowKeys.has('ArrowDown')) this.virtualY += step;
+                        if (this.activeArrowKeys.has('ArrowLeft')) this.virtualX -= step;
+                        if (this.activeArrowKeys.has('ArrowRight')) this.virtualX += step;
+
+                        const rect = this.board.getBoundingClientRect();
+
+                        const pointer = {
+                            x: (this.virtualX - rect.left) / this.zoom,
+                            y: (this.virtualY - rect.top) / this.zoom
+                        };
+
+                        this.canvas.freeDrawingBrush.onMouseMove(pointer, {
+                            e: {
+                                pointerType: 'mouse',
+                                pressure: 0.5,
+                                altKey: this.isAltPressed
+                            }
+                        });
+
+                        this.cursorManager.updatePosition(this.virtualX, this.virtualY);
+                        this.canvas.requestRenderAll();
+                    }, 16);
+                }
+
+                return;
+            }
+
+            if ((e.key === 'Delete' || e.key === 'Backspace') && !isInput) {
+                if (this.currentTool === 'select') {
+                    const activeObjects = this.canvas.getActiveObjects();
+                    if (activeObjects.length > 0) {
+                        e.preventDefault();
+                        activeObjects.forEach(obj => this.canvas.remove(obj));
+                        this.canvas.discardActiveObject();
+                        this.historyManager.saveState();
+                    }
+                }
+            } else if (isCtrl && e.key.toLowerCase() === 'z') {
                 e.preventDefault();
                 if (e.shiftKey) this.historyManager.redo();
                 else this.historyManager.undo();
@@ -147,6 +223,9 @@ export class CanvasManager {
             } else if (e.key === 'Shift' && !this.isShiftPressed && !isInput) {
                 this.isShiftPressed = true;
                 this.canvas.isDrawingMode = false;
+            } else if (e.key === 'Alt' && !isInput) {
+                e.preventDefault();
+                this.isAltPressed = true;
             } else if (e.code === 'Space' && !isInput) {
                 e.preventDefault();
                 if (!this.isSpacePressed) {
@@ -160,12 +239,34 @@ export class CanvasManager {
 
         window.addEventListener('keyup', (e) => {
             const isInput = e.target.tagName.toLowerCase() === 'input' || e.target.tagName.toLowerCase() === 'textarea';
+            const isArrow = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key);
+
+            if (isArrow) {
+                this.activeArrowKeys.delete(e.key);
+
+                if (this.activeArrowKeys.size === 0 && this.keyboardDrawInterval) {
+                    clearInterval(this.keyboardDrawInterval);
+                    this.keyboardDrawInterval = null;
+
+                    this.canvas.freeDrawingBrush.onMouseUp({
+                        e: {
+                            pointerType: 'mouse'
+                        }
+                    });
+                }
+
+                return;
+            }
 
             if (e.key === 'Shift' && !isInput) {
                 this.isShiftPressed = false;
                 if (!this.isResizingBrush && !this.isSpacePressed && (this.currentTool === 'brush' || this.currentTool === 'pen' || this.currentTool === 'eraser')) {
                     this.canvas.isDrawingMode = true;
                 }
+            }
+
+            if (e.key === 'Alt') {
+                this.isAltPressed = false;
             }
 
             if (e.code === 'Space' && !isInput) {
@@ -248,6 +349,9 @@ export class CanvasManager {
             window.currentPointerPressure = e.pressure !== undefined ? e.pressure : 0.5;
             if (window.currentPointerPressure === 0 && e.pointerType === 'mouse') window.currentPointerPressure = 0.5;
 
+            this.virtualX = e.clientX;
+            this.virtualY = e.clientY;
+
             if (this.isResizingBrush) {
                 const deltaX = e.clientX - this.resizeStartPosX;
                 let newSize = this.initialBrushSize + Math.round(deltaX * 0.5);
@@ -328,6 +432,10 @@ export class CanvasManager {
             this.historyManager.saveState();
         });
 
+        this.canvas.on('object:modified', () => {
+            this.historyManager.saveState();
+        });
+
         this.workspace.addEventListener('pointerenter', () => {
             if (!this.isSpacePressed && !this.isResizingBrush && this.currentTool !== 'fill' && this.currentTool !== 'pan') {
                 this.cursorManager.show();
@@ -341,7 +449,17 @@ export class CanvasManager {
     }
 
     setTool(tool) {
+        if (this.currentTool === 'select' && tool !== 'select') {
+            this.canvas.selection = false;
+            this.canvas.discardActiveObject();
+            this.canvas.getObjects().forEach(obj => {
+                obj.set({ selectable: false, evented: false });
+            });
+            this.canvas.requestRenderAll();
+        }
+
         this.currentTool = tool;
+
         if (tool === 'brush') {
             this.canvas.isDrawingMode = true;
             this.canvas.freeDrawingBrush = new PressureBrush(this.canvas);
@@ -368,6 +486,32 @@ export class CanvasManager {
             this.canvas.isDrawingMode = false;
             this.canvas.defaultCursor = 'grab';
             this.cursorManager.hide();
+        } else if (tool === 'select') {
+            this.canvas.isDrawingMode = false;
+            this.canvas.selection = true;
+            this.canvas.defaultCursor = 'default';
+            this.cursorManager.hide();
+
+            this.canvas.getObjects().forEach(obj => {
+                let canSelect = true;
+
+                if (obj.type === 'rect') canSelect = false;
+
+                if (this.layerManager && canSelect) {
+                    const layer = this.layerManager.layers.find(l => l.id === obj.layerId);
+                    if (!layer || layer.locked || !layer.visible) canSelect = false;
+                }
+
+                obj.set({
+                    selectable: canSelect,
+                    evented: canSelect,
+                    borderColor: '#c0392b',
+                    cornerColor: '#c0392b',
+                    cornerSize: 8,
+                    transparentCorners: false
+                });
+            });
+            this.canvas.requestRenderAll();
         }
     }
 

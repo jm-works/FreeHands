@@ -47,22 +47,34 @@ export const PressureBrush = fabric.util.createClass(fabric.BaseBrush, {
             const pt = { x: pointer.x, y: pointer.y, pressure: rawPressure };
             this.points.push(pt);
             this._lastPoint = pt;
+            this._anchorPoint = { x: pointer.x, y: pointer.y };
             return;
         }
 
-        const dx = pointer.x - this._lastPoint.x;
-        const dy = pointer.y - this._lastPoint.y;
+        let currentX = pointer.x;
+        let currentY = pointer.y;
+
+        if (e && e.altKey && this._anchorPoint) {
+            const diffX = Math.abs(currentX - this._anchorPoint.x);
+            const diffY = Math.abs(currentY - this._anchorPoint.y);
+            if (diffX > diffY) {
+                currentY = this._anchorPoint.y;
+            } else {
+                currentX = this._anchorPoint.x;
+            }
+        }
+
+        const dx = currentX - this._lastPoint.x;
+        const dy = currentY - this._lastPoint.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
 
-        const dynamicMinDist = Math.max(1.5, this.width * 0.15);
+        const dynamicMinDist = Math.max(0.2, this.width * 0.03);
 
-        if (dist < dynamicMinDist) return;
+        if (dist < 0.01) return;
 
-        const px = this._lastPoint.x + (dx * 0.7);
-        const py = this._lastPoint.y + (dy * 0.7);
-        const pPressure = (this._lastPoint.pressure * 0.7) + (rawPressure * 0.3);
+        const pPressure = (this._lastPoint.pressure * 0.6) + (rawPressure * 0.4);
 
-        const pt = { x: px, y: py, pressure: pPressure };
+        const pt = { x: currentX, y: currentY, pressure: pPressure };
         this.points.push(pt);
         this._lastPoint = pt;
     },

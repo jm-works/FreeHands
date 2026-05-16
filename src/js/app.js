@@ -74,9 +74,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const colorManager = new ColorManager('color-wheel-canvas', (color) => {
         canvasManager.setBrushColor(color);
     });
+
+    const sizeContainer = document.getElementById('size-container');
     const sizeSlider = document.getElementById('brush-size');
     const sizeInput = document.getElementById('brush-size-val');
 
+    const opacityContainer = document.getElementById('opacity-container');
     const opacitySlider = document.getElementById('brush-opacity');
     const opacityInput = document.getElementById('brush-opacity-val');
 
@@ -104,11 +107,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
         numberInput.addEventListener('input', (e) => {
             let val = parseInt(e.target.value);
+            const min = parseInt(slider.min) || 0;
+            const max = parseInt(slider.max) || 100;
 
             if (isNaN(val)) return;
-            if (val < slider.min) val = slider.min;
-            if (val > slider.max) val = slider.max;
 
+            if (val > max) {
+                val = max;
+                numberInput.value = max;
+            }
+
+            slider.value = val;
+            updateSliderFill();
+
+            let safeVal = val < min ? min : val;
+            if (callback) callback(safeVal);
+        });
+
+        numberInput.addEventListener('blur', (e) => {
+            let val = parseInt(e.target.value);
+            const min = parseInt(slider.min) || 0;
+            const max = parseInt(slider.max) || 100;
+
+            if (isNaN(val) || val < min) {
+                val = min;
+            } else if (val > max) {
+                val = max;
+            }
+
+            numberInput.value = val;
             slider.value = val;
             updateSliderFill();
             if (callback) callback(val);
@@ -157,9 +184,21 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.addEventListener('click', () => {
             const toolId = btn.id;
 
-            if (toolId === 'btn-fill') {
+            if (toolId === 'btn-brush' || toolId === 'btn-pen') {
+                sizeContainer.style.display = 'block';
+                opacityContainer.style.display = 'block';
+                toleranceContainer.style.display = 'none';
+            } else if (toolId === 'btn-eraser') {
+                sizeContainer.style.display = 'block';
+                opacityContainer.style.display = 'none';
+                toleranceContainer.style.display = 'none';
+            } else if (toolId === 'btn-fill') {
+                sizeContainer.style.display = 'none';
+                opacityContainer.style.display = 'none';
                 toleranceContainer.style.display = 'block';
             } else {
+                sizeContainer.style.display = 'none';
+                opacityContainer.style.display = 'none';
                 toleranceContainer.style.display = 'none';
             }
 
@@ -175,6 +214,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     break;
                 case 'btn-fill':
                     canvasManager.setTool('fill');
+                    break;
+                case 'btn-select':
+                    canvasManager.setTool('select');
                     break;
                 case 'btn-pan':
                     canvasManager.setTool('pan');

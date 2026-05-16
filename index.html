@@ -33,7 +33,7 @@
         </nav>
 
         <header class="toolbar">
-            <div class="value-slider">
+            <div class="value-slider" id="size-container">
                 <input type="range" id="brush-size" min="1" max="100" value="5" class="tool-slider">
 
                 <div class="value-slider-overlay">
@@ -45,9 +45,7 @@
                 </div>
             </div>
 
-            <div style="width: 10px;"></div>
-
-            <div class="value-slider">
+            <div class="value-slider" id="opacity-container">
                 <input type="range" id="brush-opacity" min="0" max="100" value="100" class="tool-slider">
 
                 <div class="value-slider-overlay">
@@ -58,8 +56,6 @@
                     </div>
                 </div>
             </div>
-
-            <div style="width: 10px;"></div>
 
             <div class="value-slider" id="tolerance-container" style="display: none;">
                 <input type="range" id="fill-tolerance" min="0" max="255" value="32" class="tool-slider">
@@ -93,6 +89,10 @@
 
                     <button class="tool-btn" id="btn-fill" title="Fill">
                         <img src="src/assets/icons/Toolbar/Fill.svg" alt="Fill" width="22" height="22">
+                    </button>
+
+                    <button class="tool-btn" id="btn-select" title="Select">
+                        <img src="src/assets/icons/Toolbar/select.svg" alt="Select" width="22" height="22">
                     </button>
 
                     <div style="height: 1px; background: var(--border-color); width: 70%; margin: 4px 0;"></div>
