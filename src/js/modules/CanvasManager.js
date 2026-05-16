@@ -371,7 +371,7 @@ export class CanvasManager {
                 this.lastPosY = e.clientY;
                 this.updateTransform();
             } else if (!this.isSpacePressed && !e.shiftKey && !this.isShiftPressed) {
-                if (this.currentTool === 'fill' || this.currentTool === 'pan') {
+                if (this.currentTool === 'fill' || this.currentTool === 'pan' || this.currentTool === 'select') {
                     this.cursorManager.hide();
                 } else {
                     this.cursorManager.updatePosition(e.clientX, e.clientY);
@@ -437,7 +437,7 @@ export class CanvasManager {
         });
 
         this.workspace.addEventListener('pointerenter', () => {
-            if (!this.isSpacePressed && !this.isResizingBrush && this.currentTool !== 'fill' && this.currentTool !== 'pan') {
+            if (!this.isSpacePressed && !this.isResizingBrush && this.currentTool !== 'fill' && this.currentTool !== 'pan' && this.currentTool !== 'select') {
                 this.cursorManager.show();
             }
             this.canvas.calcOffset();
