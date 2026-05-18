@@ -27,6 +27,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
     topMenuManager.registerMenu('menu-file', [
         {
+            label: 'Place Image',
+            action: () => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = 'image/*';
+                input.onchange = (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                        canvasManager.placeImage(ev.target.result);
+                    };
+                    reader.readAsDataURL(file);
+                };
+                input.click();
+            }
+        },
+        { type: 'separator' },
+        {
             label: 'Save Image',
             action: () => {
                 promptModal.show('Enter the name to save the image:', 'FreeHands_Artwork', (fileName) => {
