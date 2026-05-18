@@ -14,7 +14,7 @@
   
   <br><br>
 
-  ### [Access FreeHands WebSite](https://jm-works.github.io/FreeHands/)
+  ### <a href="https://jm-works.github.io/FreeHands/" target="_blank">Acessar FreeHands WebSite</a>
 
 <img src="https://cyber.dabamos.de/88x31/bikobatanari.gif" alt="Bikobatanari">
 
