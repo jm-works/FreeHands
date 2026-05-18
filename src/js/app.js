@@ -1,4 +1,4 @@
-import { CanvasManager } from './modules/CanvasManager.js';
+import { CanvasManager } from './modules/canva/CanvasManager.js';
 import { ColorManager } from './modules/ColorManager.js';
 import { IntroManager } from './modules/IntroManager.js';
 import { MenuManager } from './modules/MenuManager.js';
