@@ -40,12 +40,12 @@ export class LayerManager {
         this.toolbar = document.createElement('div');
         this.toolbar.className = 'layer-toolbar';
         this.toolbar.innerHTML = `
-            <div style="display: flex; gap: 4px;">
+            <div class="layer-btn-group">
                 <button class="layer-btn" id="btn-add-layer" title="New Layer">+</button>
                 <button class="layer-btn" id="btn-up-layer" title="Move Up">↑</button>
                 <button class="layer-btn" id="btn-down-layer" title="Move Down">↓</button>
             </div>
-            <button class="layer-btn layer-btn-delete" id="btn-delete-layer" title="Delete">
+            <button class="layer-btn layer-btn-delete" id="btn-delete-layer" title="Delete Layer">
                 <img src="src/assets/icons/Layer/deletelayer.svg" alt="Delete">
             </button>
         `;
@@ -58,6 +58,10 @@ export class LayerManager {
                 <option value="multiply">Multiply</option>
                 <option value="screen">Screen</option>
                 <option value="overlay">Overlay</option>
+                <option value="darken">Darken</option>
+                <option value="lighten">Lighten</option>
+                <option value="color-dodge">Dodge</option>
+                <option value="color-burn">Burn</option>
             </select>
             <input type="range" id="layer-opacity-slider" min="0" max="100" value="100" style="flex:1;">
             <span id="layer-opacity-label">100%</span>
@@ -69,6 +73,7 @@ export class LayerManager {
         this.container.appendChild(this.toolbar);
         this.container.appendChild(this.controlsContainer);
         this.container.appendChild(this.listContainer);
+        this._setupContainerDrop();
 
         document.getElementById('btn-add-layer').onclick = () => this.addLayer();
         document.getElementById('btn-delete-layer').onclick = () => this.deleteLayer();
@@ -207,7 +212,19 @@ export class LayerManager {
             layer.blendMode = value;
         }
 
+        this._updateActiveLayerMeta();
         this.canvas.requestRenderAll();
+    }
+
+    _updateActiveLayerMeta() {
+        const layer = this.layers.find(l => l.id === this.activeLayerId);
+        if (!layer) return;
+        const item = this.listContainer.querySelector(`[data-layer-id="${layer.id}"]`);
+        if (!item) return;
+        const meta = item.querySelector('.layer-meta');
+        if (!meta) return;
+        const blendLabel = { 'source-over': 'Normal', 'multiply': 'Multiply', 'screen': 'Screen', 'overlay': 'Overlay', 'darken': 'Darken', 'lighten': 'Lighten', 'color-dodge': 'Dodge', 'color-burn': 'Burn' };
+        meta.textContent = `${layer.opacity}%  ·  ${blendLabel[layer.blendMode] || layer.blendMode}`;
     }
 
     toggleState(id, prop) {
@@ -326,35 +343,148 @@ export class LayerManager {
     renderUI() {
         this.listContainer.innerHTML = '';
 
-        this.layers.forEach(layer => {
+        this.layers.forEach((layer, index) => {
             const item = document.createElement('div');
             item.className = `layer-item ${layer.id === this.activeLayerId ? 'active' : ''}`;
+            item.dataset.layerId = layer.id;
+            item.draggable = true;
+            if (!layer.visible) item.style.opacity = '0.45';
             item.onclick = () => this.setActiveLayer(layer.id);
             item.oncontextmenu = (e) => this.showContextMenu(e, layer.id);
 
-            const visIcon = document.createElement('span');
-            visIcon.className = 'layer-icon';
-            visIcon.innerHTML = `<img src="src/assets/icons/Layer/${layer.visible ? 'Layer_On.svg' : 'layer-Off.svg'}" alt="Visibility">`;
-            visIcon.style.opacity = layer.visible ? '1' : '0.4';
-            visIcon.onclick = (e) => { e.stopPropagation(); this.toggleState(layer.id, 'visible'); };
+            this._setupDragEvents(item, layer.id);
 
-            const lockIcon = document.createElement('span');
-            lockIcon.className = 'layer-icon';
-            lockIcon.innerHTML = `<img src="src/assets/icons/Layer/${layer.locked ? 'layer-locked.svg' : 'layer-unlocked.svg'}" alt="Lock">`;
-            lockIcon.style.opacity = layer.locked ? '1' : '0.4';
-            lockIcon.onclick = (e) => { e.stopPropagation(); this.toggleState(layer.id, 'locked'); };
+            const dragHandle = document.createElement('span');
+            dragHandle.className = 'layer-drag-handle';
+            dragHandle.innerHTML = '&#8942;&#8942;';
+            dragHandle.title = 'Drag to reorder';
+
+            const info = document.createElement('div');
+            info.className = 'layer-info';
 
             const nameSpan = document.createElement('span');
             nameSpan.className = 'layer-name';
             nameSpan.textContent = layer.name;
-            if (layer.locked) nameSpan.style.opacity = '0.5';
             nameSpan.ondblclick = (e) => { e.stopPropagation(); this.promptRename(layer); };
 
-            item.appendChild(visIcon);
-            item.appendChild(lockIcon);
-            item.appendChild(nameSpan);
+            const meta = document.createElement('span');
+            meta.className = 'layer-meta';
+            const blendLabel = { 'source-over': 'Normal', 'multiply': 'Multiply', 'screen': 'Screen', 'overlay': 'Overlay', 'darken': 'Darken', 'lighten': 'Lighten', 'color-dodge': 'Dodge', 'color-burn': 'Burn' };
+            meta.textContent = `${layer.opacity}%  ·  ${blendLabel[layer.blendMode] || layer.blendMode}`;
+
+            info.appendChild(nameSpan);
+            info.appendChild(meta);
+
+            const icons = document.createElement('div');
+            icons.className = 'layer-icons';
+
+            const visIcon = document.createElement('span');
+            visIcon.className = `layer-icon ${layer.visible ? 'active-icon' : ''}`;
+            visIcon.title = layer.visible ? 'Hide layer' : 'Show layer';
+            visIcon.innerHTML = `<img src="src/assets/icons/Layer/${layer.visible ? 'Layer_On.svg' : 'layer-Off.svg'}" alt="Visibility">`;
+            visIcon.onclick = (e) => { e.stopPropagation(); this.toggleState(layer.id, 'visible'); };
+
+            const lockIcon = document.createElement('span');
+            lockIcon.className = `layer-icon ${layer.locked ? 'active-icon' : ''}`;
+            lockIcon.title = layer.locked ? 'Unlock layer' : 'Lock layer';
+            lockIcon.innerHTML = `<img src="src/assets/icons/Layer/${layer.locked ? 'layer-locked.svg' : 'layer-unlocked.svg'}" alt="Lock">`;
+            lockIcon.onclick = (e) => { e.stopPropagation(); this.toggleState(layer.id, 'locked'); };
+
+            icons.appendChild(visIcon);
+            icons.appendChild(lockIcon);
+
+            item.appendChild(dragHandle);
+            item.appendChild(info);
+            item.appendChild(icons);
 
             this.listContainer.appendChild(item);
+        });
+    }
+
+    _setupDragEvents(item, layerId) {
+        item.addEventListener('dragstart', (e) => {
+            this._dragSrcId = layerId;
+            e.dataTransfer.effectAllowed = 'move';
+            item.classList.add('layer-dragging');
+        });
+
+        item.addEventListener('dragend', () => {
+            item.classList.remove('layer-dragging');
+            this._clearDropIndicators();
+        });
+
+        item.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            this._clearDropIndicators();
+            if (layerId !== this._dragSrcId) item.classList.add('layer-drop-over');
+        });
+
+        item.addEventListener('drop', (e) => {
+            e.preventDefault();
+            this._clearDropIndicators();
+            if (!this._dragSrcId || this._dragSrcId === layerId) return;
+
+            const fromIndex = this.layers.findIndex(l => l.id === this._dragSrcId);
+            const toIndex = this.layers.findIndex(l => l.id === layerId);
+            if (fromIndex === -1 || toIndex === -1) return;
+
+            const [moved] = this.layers.splice(fromIndex, 1);
+            this.layers.splice(toIndex, 0, moved);
+
+            this.updateZIndices();
+            this.renderUI();
+            this.canvasManager.historyManager.saveState();
+            this._dragSrcId = null;
+        });
+    }
+
+    _clearDropIndicators() {
+        this.listContainer.querySelectorAll('.layer-drop-over').forEach(el => el.classList.remove('layer-drop-over'));
+        this.listContainer.classList.remove('layer-drop-after');
+    }
+
+    _setupContainerDrop() {
+        this.listContainer.addEventListener('dragover', (e) => {
+            const items = [...this.listContainer.querySelectorAll('.layer-item')];
+            if (!items.length) return;
+            const last = items[items.length - 1];
+            const rect = last.getBoundingClientRect();
+            if (e.clientY > rect.bottom) {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                this._clearDropIndicators();
+                this.listContainer.classList.add('layer-drop-after');
+            }
+        });
+
+        this.listContainer.addEventListener('dragleave', (e) => {
+            if (!this.listContainer.contains(e.relatedTarget)) {
+                this.listContainer.classList.remove('layer-drop-after');
+            }
+        });
+
+        this.listContainer.addEventListener('drop', (e) => {
+            const items = [...this.listContainer.querySelectorAll('.layer-item')];
+            if (!items.length) return;
+            const last = items[items.length - 1];
+            const rect = last.getBoundingClientRect();
+            if (e.clientY > rect.bottom) {
+                e.preventDefault();
+                this._clearDropIndicators();
+                if (!this._dragSrcId) return;
+
+                const fromIndex = this.layers.findIndex(l => l.id === this._dragSrcId);
+                if (fromIndex === -1) return;
+
+                const [moved] = this.layers.splice(fromIndex, 1);
+                this.layers.push(moved);
+
+                this.updateZIndices();
+                this.renderUI();
+                this.canvasManager.historyManager.saveState();
+                this._dragSrcId = null;
+            }
         });
     }
 }
