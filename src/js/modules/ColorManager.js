@@ -1,3 +1,132 @@
+function hsvToHex(h, s, v) {
+    let r, g, b, i, f, p, q, t;
+    h /= 360;
+    i = Math.floor(h * 6);
+    f = h * 6 - i;
+    p = v * (1 - s);
+    q = v * (1 - f * s);
+    t = v * (1 - (1 - f) * s);
+    switch (i % 6) {
+        case 0: r = v, g = t, b = p; break;
+        case 1: r = q, g = v, b = p; break;
+        case 2: r = p, g = v, b = t; break;
+        case 3: r = p, g = q, b = v; break;
+        case 4: r = t, g = p, b = v; break;
+        case 5: r = v, g = p, b = q; break;
+    }
+    const toHex = x => {
+        const hex = Math.round(x * 255).toString(16);
+        return hex.length === 1 ? '0' + hex : hex;
+    };
+    return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
+
+function hexToHsv(hex) {
+    let r = parseInt(hex.slice(1, 3), 16) / 255;
+    let g = parseInt(hex.slice(3, 5), 16) / 255;
+    let b = parseInt(hex.slice(5, 7), 16) / 255;
+
+    let max = Math.max(r, g, b), min = Math.min(r, g, b);
+    let h = 0, s = 0, v = max;
+    let d = max - min;
+    s = max === 0 ? 0 : d / max;
+
+    if (max !== min) {
+        switch (max) {
+            case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+            case g: h = (b - r) / d + 2; break;
+            case b: h = (r - g) / d + 4; break;
+        }
+        h /= 6;
+    }
+    return { h: h * 360, s: s, v: v };
+}
+
+function drawHandle(ctx, x, y, color) {
+    ctx.beginPath();
+    ctx.arc(x, y, 5, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#ffffff';
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(x, y, 6, 0, Math.PI * 2);
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = '#000000';
+    ctx.stroke();
+}
+
+function drawColorWheel(ctx, size, center, radius, triRadius, hue, sat, val) {
+    ctx.clearRect(0, 0, size, size);
+
+    for (let i = 0; i < 360; i++) {
+        const angle = i * Math.PI / 180;
+        ctx.beginPath();
+        ctx.arc(center, center, radius, angle, (i + 1.5) * Math.PI / 180);
+        ctx.strokeStyle = `hsl(${i}, 100%, 50%)`;
+        ctx.lineWidth = 14;
+        ctx.stroke();
+    }
+
+    const angleRad = hue * Math.PI / 180;
+    const p1 = { x: center + triRadius * Math.cos(angleRad), y: center + triRadius * Math.sin(angleRad) };
+    const p2 = { x: center + triRadius * Math.cos(angleRad + 2.0944), y: center + triRadius * Math.sin(angleRad + 2.0944) };
+    const p3 = { x: center + triRadius * Math.cos(angleRad + 4.1888), y: center + triRadius * Math.sin(angleRad + 4.1888) };
+
+    ctx.beginPath();
+    ctx.moveTo(p1.x, p1.y);
+    ctx.lineTo(p2.x, p2.y);
+    ctx.lineTo(p3.x, p3.y);
+    ctx.closePath();
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+    ctx.save();
+    ctx.clip();
+
+    const gradHue = ctx.createLinearGradient(p2.x, p2.y, p1.x, p1.y);
+    gradHue.addColorStop(0, 'rgba(255,255,255,0)');
+    gradHue.addColorStop(1, `hsl(${hue}, 100%, 50%)`);
+    ctx.fillStyle = gradHue;
+    ctx.fillRect(0, 0, size, size);
+
+    const gradBlack = ctx.createLinearGradient((p1.x + p2.x) / 2, (p1.y + p2.y) / 2, p3.x, p3.y);
+    gradBlack.addColorStop(0, 'rgba(0,0,0,0)');
+    gradBlack.addColorStop(1, '#000000');
+    ctx.fillStyle = gradBlack;
+    ctx.fillRect(0, 0, size, size);
+    ctx.restore();
+
+    const hx = center + radius * Math.cos(angleRad);
+    const hy = center + radius * Math.sin(angleRad);
+    drawHandle(ctx, hx, hy, hsvToHex(hue, 1, 1));
+
+    const svx = (val * sat) * p1.x + (val * (1 - sat)) * p2.x + (1 - val) * p3.x;
+    const svy = (val * sat) * p1.y + (val * (1 - sat)) * p2.y + (1 - val) * p3.y;
+    drawHandle(ctx, svx, svy, hsvToHex(hue, sat, val));
+}
+
+function calculateSV(x, y, hue, center, triRadius) {
+    const angleRad = hue * Math.PI / 180;
+    const p1 = { x: center + triRadius * Math.cos(angleRad), y: center + triRadius * Math.sin(angleRad) };
+    const p2 = { x: center + triRadius * Math.cos(angleRad + 2.0944), y: center + triRadius * Math.sin(angleRad + 2.0944) };
+    const p3 = { x: center + triRadius * Math.cos(angleRad + 4.1888), y: center + triRadius * Math.sin(angleRad + 4.1888) };
+
+    const denom = (p2.y - p3.y) * (p1.x - p3.x) + (p3.x - p2.x) * (p1.y - p3.y);
+    const w1 = ((p2.y - p3.y) * (x - p3.x) + (p3.x - p2.x) * (y - p3.y)) / denom;
+    const w2 = ((p3.y - p1.y) * (x - p3.x) + (p1.x - p3.x) * (y - p3.y)) / denom;
+    const w3 = 1 - w1 - w2;
+
+    let v = 1 - w3;
+    v = Math.max(0, Math.min(1, v));
+    let s = v > 0 ? w1 / v : 0;
+    s = Math.max(0, Math.min(1, s));
+
+    return { sat: s, val: v };
+}
+
 export class ColorManager {
     constructor(canvasId, onColorChange) {
         this.canvas = document.getElementById(canvasId);
@@ -28,70 +157,7 @@ export class ColorManager {
     }
 
     draw() {
-        const { ctx, size, center, radius, triRadius, hue, sat, val } = this;
-        ctx.clearRect(0, 0, size, size);
-
-        for (let i = 0; i < 360; i++) {
-            const angle = i * Math.PI / 180;
-            ctx.beginPath();
-            ctx.arc(center, center, radius, angle, (i + 1.5) * Math.PI / 180);
-            ctx.strokeStyle = `hsl(${i}, 100%, 50%)`;
-            ctx.lineWidth = 14;
-            ctx.stroke();
-        }
-
-        const angleRad = hue * Math.PI / 180;
-        const p1 = { x: center + triRadius * Math.cos(angleRad), y: center + triRadius * Math.sin(angleRad) };
-        const p2 = { x: center + triRadius * Math.cos(angleRad + 2.0944), y: center + triRadius * Math.sin(angleRad + 2.0944) };
-        const p3 = { x: center + triRadius * Math.cos(angleRad + 4.1888), y: center + triRadius * Math.sin(angleRad + 4.1888) };
-
-        ctx.beginPath();
-        ctx.moveTo(p1.x, p1.y);
-        ctx.lineTo(p2.x, p2.y);
-        ctx.lineTo(p3.x, p3.y);
-        ctx.closePath();
-        ctx.fillStyle = '#ffffff';
-        ctx.fill();
-        ctx.save();
-        ctx.clip();
-
-        const gradHue = ctx.createLinearGradient(p2.x, p2.y, p1.x, p1.y);
-        gradHue.addColorStop(0, 'rgba(255,255,255,0)');
-        gradHue.addColorStop(1, `hsl(${hue}, 100%, 50%)`);
-        ctx.fillStyle = gradHue;
-        ctx.fillRect(0, 0, size, size);
-
-        const gradBlack = ctx.createLinearGradient((p1.x + p2.x) / 2, (p1.y + p2.y) / 2, p3.x, p3.y);
-        gradBlack.addColorStop(0, 'rgba(0,0,0,0)');
-        gradBlack.addColorStop(1, '#000000');
-        ctx.fillStyle = gradBlack;
-        ctx.fillRect(0, 0, size, size);
-        ctx.restore();
-
-        const hx = center + radius * Math.cos(angleRad);
-        const hy = center + radius * Math.sin(angleRad);
-        this.drawHandle(hx, hy, this.hsvToHex(hue, 1, 1));
-
-        const svx = (val * sat) * p1.x + (val * (1 - sat)) * p2.x + (1 - val) * p3.x;
-        const svy = (val * sat) * p1.y + (val * (1 - sat)) * p2.y + (1 - val) * p3.y;
-        this.drawHandle(svx, svy, this.hsvToHex(hue, sat, val));
-    }
-
-    drawHandle(x, y, color) {
-        this.ctx.beginPath();
-        this.ctx.arc(x, y, 5, 0, Math.PI * 2);
-        this.ctx.fillStyle = color;
-        this.ctx.fill();
-
-        this.ctx.lineWidth = 2;
-        this.ctx.strokeStyle = '#ffffff';
-        this.ctx.stroke();
-
-        this.ctx.beginPath();
-        this.ctx.arc(x, y, 6, 0, Math.PI * 2);
-        this.ctx.lineWidth = 1.5;
-        this.ctx.strokeStyle = '#000000';
-        this.ctx.stroke();
+        drawColorWheel(this.ctx, this.size, this.center, this.radius, this.triRadius, this.hue, this.sat, this.val);
     }
 
     addEventListeners() {
@@ -114,7 +180,9 @@ export class ColorManager {
             if (this.isDraggingRing) {
                 this.hue = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
             } else if (this.isDraggingTriangle) {
-                this.calculateSVFromTriangleClick(x, y);
+                const sv = calculateSV(x, y, this.hue, this.center, this.triRadius);
+                this.sat = sv.sat;
+                this.val = sv.val;
             }
 
             if (this.isDraggingRing || this.isDraggingTriangle) {
@@ -136,29 +204,9 @@ export class ColorManager {
         });
     }
 
-    calculateSVFromTriangleClick(x, y) {
-        const angleRad = this.hue * Math.PI / 180;
-        const p1 = { x: this.center + this.triRadius * Math.cos(angleRad), y: this.center + this.triRadius * Math.sin(angleRad) };
-        const p2 = { x: this.center + this.triRadius * Math.cos(angleRad + 2.0944), y: this.center + this.triRadius * Math.sin(angleRad + 2.0944) };
-        const p3 = { x: this.center + this.triRadius * Math.cos(angleRad + 4.1888), y: this.center + this.triRadius * Math.sin(angleRad + 4.1888) };
-
-        const denom = (p2.y - p3.y) * (p1.x - p3.x) + (p3.x - p2.x) * (p1.y - p3.y);
-        const w1 = ((p2.y - p3.y) * (x - p3.x) + (p3.x - p2.x) * (y - p3.y)) / denom;
-        const w2 = ((p3.y - p1.y) * (x - p3.x) + (p1.x - p3.x) * (y - p3.y)) / denom;
-        const w3 = 1 - w1 - w2;
-
-        let v = 1 - w3;
-        v = Math.max(0, Math.min(1, v));
-        let s = v > 0 ? w1 / v : 0;
-        s = Math.max(0, Math.min(1, s));
-
-        this.sat = s;
-        this.val = v;
-    }
-
     update() {
         this.draw();
-        const hexColor = this.hsvToHex(this.hue, this.sat, this.val);
+        const hexColor = hsvToHex(this.hue, this.sat, this.val);
 
         const preview = document.getElementById('active-color-preview');
         const hexInput = document.getElementById('color-hex-code');
@@ -230,11 +278,11 @@ export class ColorManager {
             if (val.length === 3) val = val.split('').map(c => c + c).join('');
             if (val.length === 6) {
                 const hex = '#' + val;
-                const hsv = this.hexToHsv(hex);
+                const hsv = hexToHsv(hex);
                 this.hue = hsv.h; this.sat = hsv.s; this.val = hsv.v;
                 this.update();
             } else {
-                hexInput.value = this.hsvToHex(this.hue, this.sat, this.val).replace('#', '').toUpperCase();
+                hexInput.value = hsvToHex(this.hue, this.sat, this.val).replace('#', '').toUpperCase();
             }
         });
 
@@ -242,7 +290,7 @@ export class ColorManager {
             const val = hexInput.value.replace(/[^0-9a-fA-F]/g, '');
             if (val.length === 6) {
                 const hex = '#' + val;
-                const hsv = this.hexToHsv(hex);
+                const hsv = hexToHsv(hex);
                 this.hue = hsv.h; this.sat = hsv.s; this.val = hsv.v;
                 this.draw();
                 const preview = document.getElementById('active-color-preview');
@@ -286,7 +334,7 @@ export class ColorManager {
             div.style.backgroundColor = hex;
             div.title = hex.toUpperCase();
             div.onclick = () => {
-                const hsv = this.hexToHsv(hex);
+                const hsv = hexToHsv(hex);
                 this.hue = hsv.h; this.sat = hsv.s; this.val = hsv.v;
                 this.update();
             };
@@ -301,54 +349,196 @@ export class ColorManager {
         addBtn.title = 'Add current color';
         addBtn.textContent = '+';
         addBtn.onclick = () => {
-            const current = this.hsvToHex(this.hue, this.sat, this.val);
+            const current = hsvToHex(this.hue, this.sat, this.val);
             palette.insertBefore(makeSwatch(current), addBtn);
             this._updateActiveSwatch(current);
         };
         palette.appendChild(addBtn);
     }
+}
 
-    hsvToHex(h, s, v) {
-        let r, g, b, i, f, p, q, t;
-        h /= 360;
-        i = Math.floor(h * 6);
-        f = h * 6 - i;
-        p = v * (1 - s);
-        q = v * (1 - f * s);
-        t = v * (1 - (1 - f) * s);
-        switch (i % 6) {
-            case 0: r = v, g = t, b = p; break;
-            case 1: r = q, g = v, b = p; break;
-            case 2: r = p, g = v, b = t; break;
-            case 3: r = p, g = q, b = v; break;
-            case 4: r = t, g = p, b = v; break;
-            case 5: r = v, g = p, b = q; break;
-        }
-        const toHex = x => {
-            const hex = Math.round(x * 255).toString(16);
-            return hex.length === 1 ? '0' + hex : hex;
-        };
-        return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+export class ColorPickerModal {
+    constructor() {
+        this.hue = 0;
+        this.sat = 1;
+        this.val = 1;
+        this.size = 180;
+        this.center = this.size / 2;
+        this.radius = this.size / 2 - 15;
+        this.triRadius = this.radius - 15;
     }
 
-    hexToHsv(hex) {
-        let r = parseInt(hex.slice(1, 3), 16) / 255;
-        let g = parseInt(hex.slice(3, 5), 16) / 255;
-        let b = parseInt(hex.slice(5, 7), 16) / 255;
+    show(initialHex, onConfirm) {
+        const overlay = document.createElement('div');
+        overlay.className = 'custom-modal-overlay';
+        overlay.style.zIndex = '100005';
+        overlay.style.display = 'flex';
 
-        let max = Math.max(r, g, b), min = Math.min(r, g, b);
-        let h = 0, s = 0, v = max;
-        let d = max - min;
-        s = max === 0 ? 0 : d / max;
+        const modal = document.createElement('div');
+        modal.className = 'custom-modal';
+        modal.style.width = '240px';
+        modal.style.alignItems = 'center';
 
-        if (max !== min) {
-            switch (max) {
-                case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-                case g: h = (b - r) / d + 2; break;
-                case b: h = (r - g) / d + 4; break;
+        const title = document.createElement('div');
+        title.className = 'custom-modal-message';
+        title.textContent = 'Select Color';
+        title.style.alignSelf = 'flex-start';
+
+        const canvas = document.createElement('canvas');
+        canvas.width = this.size;
+        canvas.height = this.size;
+        canvas.style.cursor = 'crosshair';
+        canvas.style.marginTop = '10px';
+        const ctx = canvas.getContext('2d');
+
+        const hexContainer = document.createElement('div');
+        hexContainer.style.cssText = 'display:flex;align-items:center;gap:10px;width:100%;margin-top:15px;';
+
+        const preview = document.createElement('div');
+        preview.style.cssText = 'width:30px;height:30px;border:1px solid var(--border-strong);';
+        preview.style.backgroundColor = initialHex;
+
+        const hexInput = document.createElement('input');
+        hexInput.type = 'text';
+        hexInput.className = 'custom-modal-input';
+        hexInput.style.flex = '1';
+        hexInput.value = initialHex.replace('#', '').toUpperCase();
+
+        hexContainer.appendChild(preview);
+        hexContainer.appendChild(hexInput);
+
+        const btnRow = document.createElement('div');
+        btnRow.className = 'custom-modal-btns';
+        btnRow.style.width = '100%';
+        btnRow.style.marginTop = '15px';
+
+        const cancelBtn = document.createElement('button');
+        cancelBtn.className = 'custom-modal-btn cancel';
+        cancelBtn.textContent = 'Cancel';
+
+        const confirmBtn = document.createElement('button');
+        confirmBtn.className = 'custom-modal-btn confirm';
+        confirmBtn.textContent = 'OK';
+
+        btnRow.appendChild(cancelBtn);
+        btnRow.appendChild(confirmBtn);
+
+        modal.appendChild(title);
+        modal.appendChild(canvas);
+        modal.appendChild(hexContainer);
+        modal.appendChild(btnRow);
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+
+        let isDraggingRing = false;
+        let isDraggingTriangle = false;
+
+        const hsv = hexToHsv(initialHex);
+        this.hue = hsv.h;
+        this.sat = hsv.s;
+        this.val = hsv.v;
+
+        const draw = () => {
+            drawColorWheel(ctx, this.size, this.center, this.radius, this.triRadius, this.hue, this.sat, this.val);
+        };
+
+        const updateState = () => {
+            draw();
+            const hex = hsvToHex(this.hue, this.sat, this.val);
+            preview.style.backgroundColor = hex;
+            if (document.activeElement !== hexInput) {
+                hexInput.value = hex.replace('#', '').toUpperCase();
             }
-            h /= 6;
-        }
-        return { h: h * 360, s: s, v: v };
+        };
+
+        const handleMouse = (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const dx = x - this.center;
+            const dy = y - this.center;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (e.type === 'mousedown') {
+                if (dist > this.radius - 10 && dist < this.radius + 10) {
+                    isDraggingRing = true;
+                } else if (dist <= this.triRadius) {
+                    isDraggingTriangle = true;
+                }
+            }
+
+            if (isDraggingRing) {
+                this.hue = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
+            } else if (isDraggingTriangle) {
+                const sv = calculateSV(x, y, this.hue, this.center, this.triRadius);
+                this.sat = sv.sat;
+                this.val = sv.val;
+            }
+
+            if (isDraggingRing || isDraggingTriangle) {
+                updateState();
+            }
+        };
+
+        canvas.addEventListener('mousedown', (e) => {
+            handleMouse(e);
+            const onMove = (me) => handleMouse(me);
+            const onUp = () => {
+                isDraggingRing = false;
+                isDraggingTriangle = false;
+                window.removeEventListener('mousemove', onMove);
+                window.removeEventListener('mouseup', onUp);
+            };
+            window.addEventListener('mousemove', onMove);
+            window.addEventListener('mouseup', onUp);
+        });
+
+        hexInput.addEventListener('blur', () => {
+            let val = hexInput.value.replace(/[^0-9a-fA-F]/g, '');
+            if (val.length === 3) val = val.split('').map(c => c + c).join('');
+            if (val.length === 6) {
+                const hex = '#' + val;
+                const hsv = hexToHsv(hex);
+                this.hue = hsv.h; this.sat = hsv.s; this.val = hsv.v;
+                updateState();
+            } else {
+                hexInput.value = hsvToHex(this.hue, this.sat, this.val).replace('#', '').toUpperCase();
+            }
+        });
+
+        hexInput.addEventListener('input', () => {
+            const val = hexInput.value.replace(/[^0-9a-fA-F]/g, '');
+            if (val.length === 6) {
+                const hex = '#' + val;
+                const hsv = hexToHsv(hex);
+                this.hue = hsv.h; this.sat = hsv.s; this.val = hsv.v;
+                draw();
+                preview.style.backgroundColor = hex;
+            }
+        });
+
+        const close = () => {
+            document.body.removeChild(overlay);
+            window.removeEventListener('keydown', onKey, { capture: true });
+        };
+
+        cancelBtn.onclick = close;
+
+        confirmBtn.onclick = () => {
+            if (onConfirm) {
+                onConfirm(hsvToHex(this.hue, this.sat, this.val));
+            }
+            close();
+        };
+
+        const onKey = (e) => {
+            if (e.key === 'Escape') cancelBtn.onclick();
+            if (e.key === 'Enter') confirmBtn.onclick();
+        };
+        window.addEventListener('keydown', onKey, { capture: true });
+
+        updateState();
     }
 }
+
+export const colorPickerModal = new ColorPickerModal();

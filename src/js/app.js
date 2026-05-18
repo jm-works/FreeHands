@@ -4,6 +4,8 @@ import { IntroManager } from './modules/IntroManager.js';
 import { MenuManager } from './modules/MenuManager.js';
 import { promptModal } from './modules/PromptModal.js';
 import { alertModal } from './modules/AlertModal.js';
+import { FilterManager } from './modules/FilterManager.js';
+import { EffectManager } from './modules/EffectManager.js';
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -22,6 +24,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const introManager = new IntroManager('fh-root', 'fh-c');
 
     const canvasManager = new CanvasManager('drawing-canvas');
+    const filterManager = new FilterManager(canvasManager);
+    const effectManager = new EffectManager(canvasManager);
 
     const topMenuManager = new MenuManager(canvasManager);
 
@@ -102,9 +106,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         },
         {
+            label: 'Add Effects',
+            action: () => {
+                effectManager.open();
+            }
+        },
+        {
             label: 'Add Filter',
             action: () => {
-                alertModal.show('Add Filter selected (to be implemented)');
+                filterManager.open();
             }
         },
         {

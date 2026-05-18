@@ -1,39 +1,16 @@
-export class PromptModal {
+import { BaseModal } from './BaseModal.js';
+
+export class PromptModal extends BaseModal {
     constructor() {
-        this.overlay = document.createElement('div');
-        this.overlay.className = 'custom-modal-overlay';
-        this.overlay.style.zIndex = '100000';
-
-        this.modal = document.createElement('div');
-        this.modal.className = 'custom-modal';
-
-        this.messageEl = document.createElement('div');
-        this.messageEl.className = 'custom-modal-message';
+        super(100000);
 
         this.inputEl = document.createElement('input');
         this.inputEl.type = 'text';
         this.inputEl.className = 'custom-modal-input';
+        this.modal.insertBefore(this.inputEl, this.btnContainer);
 
-        this.btnContainer = document.createElement('div');
-        this.btnContainer.className = 'custom-modal-btns';
-
-        this.btnCancel = document.createElement('button');
-        this.btnCancel.className = 'custom-modal-btn cancel';
-        this.btnCancel.textContent = 'Cancel';
-
-        this.btnConfirm = document.createElement('button');
-        this.btnConfirm.className = 'custom-modal-btn confirm';
-        this.btnConfirm.textContent = 'Confirm';
-
-        this.btnContainer.appendChild(this.btnCancel);
-        this.btnContainer.appendChild(this.btnConfirm);
-
-        this.modal.appendChild(this.messageEl);
-        this.modal.appendChild(this.inputEl);
-        this.modal.appendChild(this.btnContainer);
-        this.overlay.appendChild(this.modal);
-
-        document.body.appendChild(this.overlay);
+        this.btnCancel = this._createButton('Cancel', 'cancel');
+        this.btnConfirm = this._createButton('Confirm', 'confirm');
 
         this.btnCancel.onclick = () => this.close(null);
         this.btnConfirm.onclick = () => this.close(this.inputEl.value);
@@ -53,22 +30,20 @@ export class PromptModal {
     }
 
     show(message, defaultValue, callback) {
-        this.messageEl.textContent = message;
         this.inputEl.value = defaultValue;
         this.callback = callback;
-        setTimeout(() => {
-            this.overlay.style.display = 'flex';
-            this.inputEl.focus();
-            this.inputEl.select();
-        }, 10);
+        super.show(message);
+    }
+
+    _onShow() {
+        this.inputEl.focus();
+        this.inputEl.select();
     }
 
     close(value) {
         this.overlay.style.display = 'none';
         if (this.callback) {
-            setTimeout(() => {
-                this.callback(value);
-            }, 10);
+            setTimeout(() => this.callback(value), 10);
         }
     }
 }

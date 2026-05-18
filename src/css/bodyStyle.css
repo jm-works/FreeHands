@@ -177,3 +177,20 @@ body {
 .custom-modal-btn.confirm:hover {
     background-color: var(--accent-dim);
 }
+
+.custom-modal-scroll::-webkit-scrollbar {
+    width: 4px;
+}
+
+.custom-modal-scroll::-webkit-scrollbar-track {
+    background: var(--ink-dark);
+}
+
+.custom-modal-scroll::-webkit-scrollbar-thumb {
+    background: var(--border-strong);
+    border-radius: 0;
+}
+
+.custom-modal-scroll::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-dim);
+}
