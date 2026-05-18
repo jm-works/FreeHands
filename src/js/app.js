@@ -3,6 +3,7 @@ import { ColorManager } from './modules/ColorManager.js';
 import { IntroManager } from './modules/IntroManager.js';
 import { MenuManager } from './modules/MenuManager.js';
 import { promptModal } from './modules/PromptModal.js';
+import { alertModal } from './modules/AlertModal.js';
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -66,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const h = parseInt(parts[1].trim(), 10);
                         if (!isNaN(w) && !isNaN(h) && w > 0 && h > 0) {
                             if (w > 1920 || h > 1080) {
-                                alert('Maximum size allowed is 1920x1080px!');
+                                alertModal.show('Maximum size allowed is 1920x1080px!');
                                 return;
                             }
                             canvasManager.resizeCanvas(w, h);
@@ -75,7 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 sizeDisplay.textContent = `${w} x ${h} px`;
                             }
                         } else {
-                            alert('Invalid dimensions!');
+                            alertModal.show('Invalid dimensions!');
                         }
                     }
                 });
@@ -84,15 +85,72 @@ document.addEventListener('DOMContentLoaded', () => {
         {
             label: 'Add Filter',
             action: () => {
-                console.log('Action: Add Filter - Irei Fazer algo aqui depois');
-                alert('Add Filter selected (to be implemented)');
+                alertModal.show('Add Filter selected (to be implemented)');
             }
         },
         {
             label: 'Change Paper Texture',
             action: () => {
-                console.log('Action: Change Texture - Irei Fazer algo aqui depois');
-                alert('Change Paper Texture selected (to be implemented)');
+                const textures = [
+                    { id: 'none', label: 'Plain White' },
+                    { id: 'grain', label: 'Paper Grain' },
+                    { id: 'watercolor', label: 'Watercolor Paper' },
+                    { id: 'canvas_fabric', label: 'Canvas' },
+                    { id: 'parchment', label: 'Parchment' },
+                    { id: 'kraft', label: 'Kraft Paper' },
+                    { id: 'grid', label: 'Grid' },
+                    { id: 'dots', label: 'Dot Grid' }
+                ];
+
+                const overlay = document.createElement('div');
+                overlay.className = 'custom-modal-overlay';
+                overlay.style.zIndex = '100001';
+                overlay.style.display = 'flex';
+
+                const modal = document.createElement('div');
+                modal.className = 'custom-modal';
+                modal.style.width = '320px';
+
+                const title = document.createElement('div');
+                title.className = 'custom-modal-message';
+                title.textContent = 'Select Paper Texture';
+
+                const grid = document.createElement('div');
+                grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:8px;max-height:280px;overflow-y:auto;padding-right:4px;';
+
+                textures.forEach(t => {
+                    const btn = document.createElement('button');
+                    btn.className = 'custom-modal-btn';
+                    btn.style.cssText = 'width:100%;padding:10px 8px;text-align:center;cursor:pointer;font-size:0.72rem;';
+                    btn.textContent = t.label;
+                    btn.onclick = () => {
+                        document.body.removeChild(overlay);
+                        canvasManager.setPaperTexture(t.id);
+                    };
+                    grid.appendChild(btn);
+                });
+
+                const cancelRow = document.createElement('div');
+                cancelRow.className = 'custom-modal-btns';
+                const cancelBtn = document.createElement('button');
+                cancelBtn.className = 'custom-modal-btn cancel';
+                cancelBtn.textContent = 'Cancel';
+                cancelBtn.onclick = () => document.body.removeChild(overlay);
+                cancelRow.appendChild(cancelBtn);
+
+                const onKey = (e) => {
+                    if (e.key === 'Escape') {
+                        document.body.removeChild(overlay);
+                        window.removeEventListener('keydown', onKey, { capture: true });
+                    }
+                };
+                window.addEventListener('keydown', onKey, { capture: true });
+
+                modal.appendChild(title);
+                modal.appendChild(grid);
+                modal.appendChild(cancelRow);
+                overlay.appendChild(modal);
+                document.body.appendChild(overlay);
             }
         }
     ]);
