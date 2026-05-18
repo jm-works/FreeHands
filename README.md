@@ -1,8 +1,9 @@
 <div align="center">
-  
   <img src="src/assets/logo/Icon.svg" alt="FreeHands Logo" width="220">
 
-  # FreeHands
+<hr>
+
+  #   <img src="src/assets/logo/IconComplete.svg" alt="FreeHands Logo" width="150">
 
   *A Drawing WebApp*
 
