@@ -287,7 +287,7 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.addEventListener('click', () => {
             const toolId = btn.id;
 
-            if (toolId === 'btn-brush' || toolId === 'btn-pen') {
+            if (toolId === 'btn-brush' || toolId === 'btn-pen' || toolId === 'btn-rectangle' || toolId === 'btn-ellipse') {
                 sizeContainer.style.display = 'block';
                 opacityContainer.style.display = 'block';
                 toleranceContainer.style.display = 'none';
@@ -317,6 +317,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     break;
                 case 'btn-fill':
                     canvasManager.setTool('fill');
+                    break;
+                case 'btn-rectangle':
+                    canvasManager.setTool('rectangle');
+                    break;
+                case 'btn-ellipse':
+                    canvasManager.setTool('ellipse');
                     break;
                 case 'btn-cutarea':
                     canvasManager.setTool('cutarea');

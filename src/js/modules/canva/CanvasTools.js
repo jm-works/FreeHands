@@ -53,6 +53,22 @@ export class CanvasTools {
             this.cm.canvas.getObjects().forEach(obj => {
                 obj.set({ selectable: false, evented: false });
             });
+        } else if (tool === 'rectangle') {
+            this.cm.canvas.isDrawingMode = false;
+            this.cm.canvas.defaultCursor = 'crosshair';
+            this.cm.cursorManager.hide();
+            this.cm.canvas.selection = false;
+            this.cm.canvas.getObjects().forEach(obj => {
+                obj.set({ selectable: false, evented: false });
+            });
+        } else if (tool === 'ellipse') {
+            this.cm.canvas.isDrawingMode = false;
+            this.cm.canvas.defaultCursor = 'crosshair';
+            this.cm.cursorManager.hide();
+            this.cm.canvas.selection = false;
+            this.cm.canvas.getObjects().forEach(obj => {
+                obj.set({ selectable: false, evented: false });
+            });
         } else if (tool === 'pan') {
             this.cm.canvas.isDrawingMode = false;
             this.cm.canvas.defaultCursor = 'grab';
@@ -66,7 +82,7 @@ export class CanvasTools {
             this.cm.canvas.getObjects().forEach(obj => {
                 let canSelect = true;
 
-                if (obj.type === 'rect' || obj.isEraser || obj.isSelectionRect) canSelect = false;
+                if (obj.type === 'rect' || obj.type === 'ellipse' || obj.isEraser || obj.isSelectionRect) canSelect = false;
 
                 if (this.cm.layerManager && canSelect) {
                     const layer = this.cm.layerManager.layers.find(l => l.id === obj.layerId);

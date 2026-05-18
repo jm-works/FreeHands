@@ -184,6 +184,10 @@ export class CanvasEvents {
         this.cm.workspace.addEventListener('touchstart', interceptDrawing, { capture: true, passive: false });
 
         this.cm.workspace.addEventListener('pointerdown', (e) => {
+            if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) {
+                document.activeElement.blur();
+            }
+
             window.currentPointerPressure = e.pressure !== undefined ? e.pressure : 0.5;
             if (window.currentPointerPressure === 0 && e.pointerType === 'mouse') window.currentPointerPressure = 0.5;
 
@@ -230,6 +234,26 @@ export class CanvasEvents {
                 return;
             }
 
+            if (this.cm.currentTool === 'rectangle') {
+                e.preventDefault();
+                e.stopPropagation();
+                const rect = this.cm.board.getBoundingClientRect();
+                const x = (e.clientX - rect.left) / this.cm.zoom;
+                const y = (e.clientY - rect.top) / this.cm.zoom;
+                this.cm.rectangleManager.onMouseDown(x, y);
+                return;
+            }
+
+            if (this.cm.currentTool === 'ellipse') {
+                e.preventDefault();
+                e.stopPropagation();
+                const rect = this.cm.board.getBoundingClientRect();
+                const x = (e.clientX - rect.left) / this.cm.zoom;
+                const y = (e.clientY - rect.top) / this.cm.zoom;
+                this.cm.ellipseManager.onMouseDown(x, y);
+                return;
+            }
+
             if (this.cm.currentTool === 'fill') {
                 e.preventDefault();
                 e.stopPropagation();
@@ -260,6 +284,20 @@ export class CanvasEvents {
                 this.cm.cutAreaManager.onMouseMove(x, y);
             }
 
+            if (this.cm.currentTool === 'rectangle') {
+                const rect = this.cm.board.getBoundingClientRect();
+                const x = (e.clientX - rect.left) / this.cm.zoom;
+                const y = (e.clientY - rect.top) / this.cm.zoom;
+                this.cm.rectangleManager.onMouseMove(x, y, e.shiftKey || this.cm.isShiftPressed);
+            }
+
+            if (this.cm.currentTool === 'ellipse') {
+                const rect = this.cm.board.getBoundingClientRect();
+                const x = (e.clientX - rect.left) / this.cm.zoom;
+                const y = (e.clientY - rect.top) / this.cm.zoom;
+                this.cm.ellipseManager.onMouseMove(x, y, e.shiftKey || this.cm.isShiftPressed);
+            }
+
             if (this.cm.isResizingBrush) {
                 const deltaX = e.clientX - this.cm.resizeStartPosX;
                 let newSize = this.cm.initialBrushSize + Math.round(deltaX * 0.5);
@@ -279,7 +317,7 @@ export class CanvasEvents {
                 this.cm.lastPosY = e.clientY;
                 this.cm.updateTransform();
             } else if (!this.cm.isSpacePressed && !e.shiftKey && !this.cm.isShiftPressed) {
-                if (this.cm.currentTool === 'fill' || this.cm.currentTool === 'pan' || this.cm.currentTool === 'select' || this.cm.currentTool === 'cutarea') {
+                if (this.cm.currentTool === 'fill' || this.cm.currentTool === 'pan' || this.cm.currentTool === 'select' || this.cm.currentTool === 'cutarea' || this.cm.currentTool === 'rectangle' || this.cm.currentTool === 'ellipse') {
                     this.cm.cursorManager.hide();
                 } else {
                     this.cm.cursorManager.updatePosition(e.clientX, e.clientY);
@@ -293,6 +331,14 @@ export class CanvasEvents {
         window.addEventListener('pointerup', (e) => {
             if (this.cm.currentTool === 'cutarea') {
                 this.cm.cutAreaManager.onMouseUp();
+            }
+
+            if (this.cm.currentTool === 'rectangle') {
+                this.cm.rectangleManager.onMouseUp();
+            }
+
+            if (this.cm.currentTool === 'ellipse') {
+                this.cm.ellipseManager.onMouseUp();
             }
 
             if (this.cm.isResizingBrush) {
@@ -352,7 +398,7 @@ export class CanvasEvents {
         });
 
         this.cm.workspace.addEventListener('pointerenter', () => {
-            if (!this.cm.isSpacePressed && !this.cm.isResizingBrush && this.cm.currentTool !== 'fill' && this.cm.currentTool !== 'pan' && this.cm.currentTool !== 'select' && this.cm.currentTool !== 'cutarea') {
+            if (!this.cm.isSpacePressed && !this.cm.isResizingBrush && this.cm.currentTool !== 'fill' && this.cm.currentTool !== 'pan' && this.cm.currentTool !== 'select' && this.cm.currentTool !== 'cutarea' && this.cm.currentTool !== 'rectangle' && this.cm.currentTool !== 'ellipse') {
                 this.cm.cursorManager.show();
             }
             this.cm.canvas.calcOffset();

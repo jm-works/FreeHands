@@ -3,6 +3,8 @@ import { HistoryManager } from '../HistoryManager.js';
 import { FillManager } from '../FillManager.js';
 import { LayerManager } from '../LayerManager.js';
 import { CutAreaManager } from '../CutAreaManager.js';
+import { RectangleManager } from '../RectangleManager.js';
+import { EllipseManager } from '../EllipseManager.js';
 
 import { CanvasRenderer } from './CanvasRenderer.js';
 import { CanvasEvents } from './CanvasEvents.js';
@@ -74,6 +76,8 @@ export class CanvasManager {
         this.historyManager = new HistoryManager(this);
         this.fillManager = new FillManager(this);
         this.cutAreaManager = new CutAreaManager(this);
+        this.rectangleManager = new RectangleManager(this);
+        this.ellipseManager = new EllipseManager(this);
         this.layerManager = new LayerManager(this);
         this.canvas.layerManager = this.layerManager;
         this.canvas.historyManager = this.historyManager;
