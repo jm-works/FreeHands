@@ -121,14 +121,17 @@
                         <canvas id="color-wheel-canvas"></canvas>
                         <div class="current-color-display">
                             <div id="active-color-preview"></div>
-                            <span id="color-hex-code">#000000</span>
+                            <div class="hex-input-wrapper">
+                                <span class="hex-prefix">#</span>
+                                <input id="color-hex-code" type="text" value="000000" maxlength="6" spellcheck="false" />
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="docker" style="flex-grow: 0; height: 150px;">
+                <div class="docker" style="flex-grow: 0; height: 164px;">
                     <div class="docker-title">Color Palette</div>
-                    <div class="docker-content" style="overflow-y: auto;">
+                    <div class="docker-content" style="overflow-y: auto; padding: 8px;">
                         <div id="color-palette" class="palette-grid"></div>
                     </div>
                 </div>

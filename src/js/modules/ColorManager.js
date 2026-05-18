@@ -161,16 +161,110 @@ export class ColorManager {
         const hexColor = this.hsvToHex(this.hue, this.sat, this.val);
 
         const preview = document.getElementById('active-color-preview');
-        const hexText = document.getElementById('color-hex-code');
+        const hexInput = document.getElementById('color-hex-code');
 
-        if (preview && hexText) {
-            preview.style.backgroundColor = hexColor;
-            hexText.textContent = hexColor.toUpperCase();
+        if (preview) preview.style.backgroundColor = hexColor;
+        if (hexInput && document.activeElement !== hexInput) {
+            hexInput.value = hexColor.replace('#', '').toUpperCase();
         }
+
+        this._updateActiveSwatch(hexColor);
 
         if (this.onColorChange) {
             this.onColorChange(hexColor);
         }
+    }
+
+    _showSwatchContextMenu(e, swatchEl) {
+        e.preventDefault();
+        document.querySelectorAll('.swatch-context-menu').forEach(m => m.remove());
+
+        const menu = document.createElement('div');
+        menu.className = 'swatch-context-menu';
+        menu.style.visibility = 'hidden';
+        menu.style.left = '0px';
+        menu.style.top = '0px';
+
+        const deleteItem = document.createElement('div');
+        deleteItem.className = 'swatch-context-item swatch-context-delete';
+        deleteItem.textContent = 'Delete Color';
+        deleteItem.onclick = () => {
+            swatchEl.remove();
+            menu.remove();
+        };
+
+        menu.appendChild(deleteItem);
+        document.body.appendChild(menu);
+
+        const mw = menu.offsetWidth;
+        const mh = menu.offsetHeight;
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+
+        const x = e.clientX + mw > vw ? e.clientX - mw : e.clientX;
+        const y = e.clientY + mh > vh ? e.clientY - mh : e.clientY;
+
+        menu.style.left = x + 'px';
+        menu.style.top = y + 'px';
+        menu.style.visibility = 'visible';
+
+        const close = (ev) => {
+            if (!menu.contains(ev.target)) {
+                menu.remove();
+                document.removeEventListener('mousedown', close);
+            }
+        };
+        setTimeout(() => document.addEventListener('mousedown', close), 0);
+    }
+
+    _setupHexInput() {
+        const hexInput = document.getElementById('color-hex-code');
+        if (!hexInput) return;
+
+        hexInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') hexInput.blur();
+        });
+
+        hexInput.addEventListener('blur', () => {
+            let val = hexInput.value.replace(/[^0-9a-fA-F]/g, '');
+            if (val.length === 3) val = val.split('').map(c => c + c).join('');
+            if (val.length === 6) {
+                const hex = '#' + val;
+                const hsv = this.hexToHsv(hex);
+                this.hue = hsv.h; this.sat = hsv.s; this.val = hsv.v;
+                this.update();
+            } else {
+                hexInput.value = this.hsvToHex(this.hue, this.sat, this.val).replace('#', '').toUpperCase();
+            }
+        });
+
+        hexInput.addEventListener('input', () => {
+            const val = hexInput.value.replace(/[^0-9a-fA-F]/g, '');
+            if (val.length === 6) {
+                const hex = '#' + val;
+                const hsv = this.hexToHsv(hex);
+                this.hue = hsv.h; this.sat = hsv.s; this.val = hsv.v;
+                this.draw();
+                const preview = document.getElementById('active-color-preview');
+                if (preview) preview.style.backgroundColor = hex;
+                this._updateActiveSwatch(hex);
+                if (this.onColorChange) this.onColorChange(hex);
+            }
+        });
+    }
+
+    _updateActiveSwatch(hexColor) {
+        const swatches = document.querySelectorAll('.palette-color');
+        swatches.forEach(sw => {
+            const swHex = this._rgbToHex(sw.style.backgroundColor);
+            sw.classList.toggle('active-swatch', swHex && swHex.toLowerCase() === hexColor.toLowerCase());
+        });
+    }
+
+    _rgbToHex(rgb) {
+        const m = rgb.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
+        if (!m) return null;
+        return '#' + [m[1], m[2], m[3]].map(x => parseInt(x).toString(16).padStart(2, '0')).join('');
     }
 
     createDefaultPalette() {
@@ -178,25 +272,40 @@ export class ColorManager {
         if (!palette) return;
         palette.innerHTML = '';
 
+        this._setupHexInput();
+
         const colors = [
-            '#000000', '#333333', '#777777', '#FFFFFF', '#FF0000',
-            '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF',
-            '#8B4513', '#FFA500', '#8A2BE2', '#008000', '#4B0082'
+            '#0D0D0D', '#2A2A2A', '#555555', '#A0A0A0', '#E0E0E0',
+            '#C0392B', '#7A1F18', '#E8774A', '#F0C27F', '#FFFFFF',
+            '#1A3A4A', '#2980B9', '#6DAEDB', '#27AE60', '#F39C12',
         ];
 
-        colors.forEach(hex => {
+        const makeSwatch = (hex) => {
             const div = document.createElement('div');
             div.className = 'palette-color';
             div.style.backgroundColor = hex;
+            div.title = hex.toUpperCase();
             div.onclick = () => {
                 const hsv = this.hexToHsv(hex);
-                this.hue = hsv.h;
-                this.sat = hsv.s;
-                this.val = hsv.v;
+                this.hue = hsv.h; this.sat = hsv.s; this.val = hsv.v;
                 this.update();
             };
-            palette.appendChild(div);
-        });
+            div.addEventListener('contextmenu', (e) => this._showSwatchContextMenu(e, div));
+            return div;
+        };
+
+        colors.forEach(hex => palette.appendChild(makeSwatch(hex)));
+
+        const addBtn = document.createElement('div');
+        addBtn.className = 'palette-add-btn';
+        addBtn.title = 'Add current color';
+        addBtn.textContent = '+';
+        addBtn.onclick = () => {
+            const current = this.hsvToHex(this.hue, this.sat, this.val);
+            palette.insertBefore(makeSwatch(current), addBtn);
+            this._updateActiveSwatch(current);
+        };
+        palette.appendChild(addBtn);
     }
 
     hsvToHex(h, s, v) {
