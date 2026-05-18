@@ -5,10 +5,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FreeHands - A Drawing WebApp</title>
+
     <link rel="shortcut icon" href="src/assets/logo/Icon.svg">
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Special+Elite&family=Oswald:wght@400;600;700&display=swap" rel="stylesheet">
+
     <link rel="stylesheet" href="src/css/bodyStyle.css">
     <link rel="stylesheet" href="src/css/toolbarStyle.css">
     <link rel="stylesheet" href="src/css/menuStyle.css">
@@ -17,17 +20,20 @@
     <link rel="stylesheet" href="src/css/introductionStyle.css">
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
-
 </head>
 
 <body>
-    <div id="fh-root"><canvas id="fh-c"></canvas></div>
+    <div id="fh-root">
+        <canvas id="fh-c"></canvas>
+    </div>
 
     <div class="app-container">
+
         <nav class="menu-bar">
             <div class="app-logo">
                 <span class="app-logo-text">Free<span>Hands</span></span>
             </div>
+
             <div class="menu-item" id="menu-file">File</div>
             <div class="menu-item" id="menu-edit">Edit</div>
         </nav>
@@ -35,7 +41,6 @@
         <header class="toolbar">
             <div class="value-slider" id="size-container">
                 <input type="range" id="brush-size" min="1" max="100" value="5" class="tool-slider">
-
                 <div class="value-slider-overlay">
                     <label for="brush-size">Size</label>
                     <div class="value-slider-inputs">
@@ -47,7 +52,6 @@
 
             <div class="value-slider" id="opacity-container">
                 <input type="range" id="brush-opacity" min="0" max="100" value="100" class="tool-slider">
-
                 <div class="value-slider-overlay">
                     <label for="brush-opacity">Opacity</label>
                     <div class="value-slider-inputs">
@@ -59,7 +63,6 @@
 
             <div class="value-slider" id="tolerance-container" style="display: none;">
                 <input type="range" id="fill-tolerance" min="0" max="255" value="32" class="tool-slider">
-
                 <div class="value-slider-overlay">
                     <label for="fill-tolerance">Tolerance</label>
                     <div class="value-slider-inputs">
@@ -70,7 +73,6 @@
         </header>
 
         <div class="main-workspace">
-
             <aside class="sidebar left-sidebar">
                 <div class="docker-title" style="text-align: center; font-size: 0.6rem; padding: 6px 4px;">Tools</div>
                 <div class="docker-content toolbox-grid">
@@ -89,6 +91,10 @@
 
                     <button class="tool-btn" id="btn-fill" title="Fill">
                         <img src="src/assets/icons/Toolbar/Fill.svg" alt="Fill" width="22" height="22">
+                    </button>
+
+                    <button class="tool-btn" id="btn-cutarea" title="Cut Area">
+                        <img src="src/assets/icons/Toolbar/cutArea.svg" alt="Cut Area" width="22" height="22">
                     </button>
 
                     <button class="tool-btn" id="btn-select" title="Select">
@@ -113,7 +119,6 @@
                     <div class="docker-title">Color Selector (HSV)</div>
                     <div class="docker-content color-picker-container">
                         <canvas id="color-wheel-canvas"></canvas>
-
                         <div class="current-color-display">
                             <div id="active-color-preview"></div>
                             <span id="color-hex-code">#000000</span>
@@ -124,8 +129,7 @@
                 <div class="docker" style="flex-grow: 0; height: 150px;">
                     <div class="docker-title">Color Palette</div>
                     <div class="docker-content" style="overflow-y: auto;">
-                        <div id="color-palette" class="palette-grid">
-                        </div>
+                        <div id="color-palette" class="palette-grid"></div>
                     </div>
                 </div>
 
@@ -136,7 +140,6 @@
                     </div>
                 </div>
             </aside>
-
         </div>
 
         <footer class="status-bar">

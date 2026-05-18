@@ -241,6 +241,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 case 'btn-fill':
                     canvasManager.setTool('fill');
                     break;
+                case 'btn-cutarea':
+                    canvasManager.setTool('cutarea');
+                    break;
                 case 'btn-select':
                     canvasManager.setTool('select');
                     break;

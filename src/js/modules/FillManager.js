@@ -4,7 +4,7 @@ export class FillManager {
         this.canvas = canvasManager.canvas;
     }
 
-    fill(startX, startY, hexColor, tolerance = 32, opacity = 1) {
+    fill(startX, startY, hexColor, tolerance = 32, opacity = 1, clipBounds = null, onComplete = null) {
         startX = Math.floor(startX);
         startY = Math.floor(startY);
 
@@ -14,6 +14,14 @@ export class FillManager {
         const targetColor = this.hexToRgba(hexColor, opacity);
 
         if (startX < 0 || startX >= width || startY < 0 || startY >= height) return;
+
+        if (clipBounds) {
+            const cl = Math.floor(clipBounds.left);
+            const ct = Math.floor(clipBounds.top);
+            const cr = cl + Math.floor(clipBounds.width);
+            const cb = ct + Math.floor(clipBounds.height);
+            if (startX < cl || startX >= cr || startY < ct || startY >= cb) return;
+        }
 
         const tempReadCanvas = document.createElement('canvas');
         tempReadCanvas.width = width;
@@ -39,11 +47,18 @@ export class FillManager {
         const fillData = fillImgData.data;
         const visited = new Uint8Array(width * height);
 
+        const minX = clipBounds ? Math.max(0, Math.floor(clipBounds.left)) : 0;
+        const minY = clipBounds ? Math.max(0, Math.floor(clipBounds.top)) : 0;
+        const maxX = clipBounds ? Math.min(width - 1, Math.floor(clipBounds.left + clipBounds.width) - 1) : width - 1;
+        const maxY = clipBounds ? Math.min(height - 1, Math.floor(clipBounds.top + clipBounds.height) - 1) : height - 1;
+
         const stack = [startX, startY];
 
         while (stack.length > 0) {
             const y = stack.pop();
             const x = stack.pop();
+
+            if (x < minX || x > maxX || y < minY || y > maxY) continue;
 
             const pos = y * width + x;
             if (visited[pos]) continue;
@@ -65,10 +80,10 @@ export class FillManager {
                 fillData[pos4 + 2] = targetColor[2];
                 fillData[pos4 + 3] = targetColor[3];
 
-                if (x > 0) stack.push(x - 1, y);
-                if (x < width - 1) stack.push(x + 1, y);
-                if (y > 0) stack.push(x, y - 1);
-                if (y < height - 1) stack.push(x, y + 1);
+                if (x > minX) stack.push(x - 1, y);
+                if (x < maxX) stack.push(x + 1, y);
+                if (y > minY) stack.push(x, y - 1);
+                if (y < maxY) stack.push(x, y + 1);
             }
         }
 
@@ -87,6 +102,7 @@ export class FillManager {
             this.canvas.add(img);
             this.canvas.requestRenderAll();
             this.canvasManager.historyManager.saveState();
+            if (onComplete) onComplete();
         });
     }
 

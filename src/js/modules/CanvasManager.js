@@ -4,6 +4,7 @@ import { FillManager } from './FillManager.js';
 import { PressureBrush } from './PressureBrush.js';
 import { EraserBrush } from './EraserBrush.js';
 import { LayerManager } from './LayerManager.js';
+import { CutAreaManager } from './CutAreaManager.js';
 
 fabric.Object.prototype.selectable = false;
 fabric.Object.prototype.evented = false;
@@ -31,6 +32,7 @@ export class CanvasManager {
         this.cursorManager = new CursorManager(this.workspace);
         this.historyManager = new HistoryManager(this);
         this.fillManager = new FillManager(this);
+        this.cutAreaManager = new CutAreaManager(this);
 
         this.brushColor = '#000000';
         this.brushSize = 5;
@@ -65,6 +67,8 @@ export class CanvasManager {
         this.layerCtx = this.layerCanvas.getContext('2d');
 
         this.layerManager = new LayerManager(this);
+        this.canvas.layerManager = this.layerManager;
+        this.canvas.historyManager = this.historyManager;
         this.overrideRender();
 
         this.virtualX = window.innerWidth / 2;
@@ -212,6 +216,24 @@ export class CanvasManager {
                         this.canvas.discardActiveObject();
                         this.historyManager.saveState();
                     }
+                } else if (this.currentTool === 'cutarea') {
+                    e.preventDefault();
+                    this.cutAreaManager.deleteSelection();
+                }
+            } else if (isCtrl && e.key.toLowerCase() === 'c' && !isInput) {
+                if (this.currentTool === 'cutarea') {
+                    e.preventDefault();
+                    this.cutAreaManager.copy();
+                }
+            } else if (isCtrl && e.key.toLowerCase() === 'x' && !isInput) {
+                if (this.currentTool === 'cutarea') {
+                    e.preventDefault();
+                    this.cutAreaManager.cut();
+                }
+            } else if (isCtrl && e.key.toLowerCase() === 'v' && !isInput) {
+                if (this.cutAreaManager.clipboardDataURL) {
+                    e.preventDefault();
+                    this.cutAreaManager.paste();
                 }
             } else if (isCtrl && e.key.toLowerCase() === 'z') {
                 e.preventDefault();
@@ -334,13 +356,28 @@ export class CanvasManager {
                 return;
             }
 
+            if (this.currentTool === 'cutarea') {
+                e.preventDefault();
+                e.stopPropagation();
+                const rect = this.board.getBoundingClientRect();
+                const x = (e.clientX - rect.left) / this.zoom;
+                const y = (e.clientY - rect.top) / this.zoom;
+                this.cutAreaManager.onMouseDown(x, y);
+                return;
+            }
+
             if (this.currentTool === 'fill') {
                 e.preventDefault();
                 e.stopPropagation();
                 const rect = this.board.getBoundingClientRect();
                 const x = (e.clientX - rect.left) / this.zoom;
                 const y = (e.clientY - rect.top) / this.zoom;
-                this.fillManager.fill(x, y, this.brushColor, this.fillTolerance, this.brushOpacity);
+                const sel = this.cutAreaManager.selectionRect;
+                const clipBounds = (sel && sel.width > 0 && sel.height > 0)
+                    ? { left: sel.left, top: sel.top, width: sel.width, height: sel.height }
+                    : null;
+                this.fillManager.fill(x, y, this.brushColor, this.fillTolerance, this.brushOpacity, clipBounds,
+                    clipBounds ? () => this.cutAreaManager.clearSelection() : null);
                 return;
             }
         }, { capture: true });
@@ -351,6 +388,13 @@ export class CanvasManager {
 
             this.virtualX = e.clientX;
             this.virtualY = e.clientY;
+
+            if (this.currentTool === 'cutarea') {
+                const rect = this.board.getBoundingClientRect();
+                const x = (e.clientX - rect.left) / this.zoom;
+                const y = (e.clientY - rect.top) / this.zoom;
+                this.cutAreaManager.onMouseMove(x, y);
+            }
 
             if (this.isResizingBrush) {
                 const deltaX = e.clientX - this.resizeStartPosX;
@@ -371,7 +415,7 @@ export class CanvasManager {
                 this.lastPosY = e.clientY;
                 this.updateTransform();
             } else if (!this.isSpacePressed && !e.shiftKey && !this.isShiftPressed) {
-                if (this.currentTool === 'fill' || this.currentTool === 'pan' || this.currentTool === 'select') {
+                if (this.currentTool === 'fill' || this.currentTool === 'pan' || this.currentTool === 'select' || this.currentTool === 'cutarea') {
                     this.cursorManager.hide();
                 } else {
                     this.cursorManager.updatePosition(e.clientX, e.clientY);
@@ -383,6 +427,10 @@ export class CanvasManager {
         });
 
         window.addEventListener('pointerup', (e) => {
+            if (this.currentTool === 'cutarea') {
+                this.cutAreaManager.onMouseUp();
+            }
+
             if (this.isResizingBrush) {
                 this.isResizingBrush = false;
                 this.cursorManager.updatePosition(e.clientX, e.clientY);
@@ -437,7 +485,7 @@ export class CanvasManager {
         });
 
         this.workspace.addEventListener('pointerenter', () => {
-            if (!this.isSpacePressed && !this.isResizingBrush && this.currentTool !== 'fill' && this.currentTool !== 'pan' && this.currentTool !== 'select') {
+            if (!this.isSpacePressed && !this.isResizingBrush && this.currentTool !== 'fill' && this.currentTool !== 'pan' && this.currentTool !== 'select' && this.currentTool !== 'cutarea') {
                 this.cursorManager.show();
             }
             this.canvas.calcOffset();
@@ -449,6 +497,11 @@ export class CanvasManager {
     }
 
     setTool(tool) {
+        if ((this.currentTool === 'cutarea' && tool !== 'cutarea' && tool !== 'fill') ||
+            (this.currentTool === 'fill' && tool !== 'fill' && tool !== 'cutarea')) {
+            this.cutAreaManager.clearSelection();
+        }
+
         if (this.currentTool === 'select' && tool !== 'select') {
             this.canvas.selection = false;
             this.canvas.discardActiveObject();
@@ -482,6 +535,14 @@ export class CanvasManager {
             this.canvas.isDrawingMode = false;
             this.canvas.defaultCursor = 'crosshair';
             this.cursorManager.hide();
+        } else if (tool === 'cutarea') {
+            this.canvas.isDrawingMode = false;
+            this.canvas.defaultCursor = 'crosshair';
+            this.cursorManager.hide();
+            this.canvas.selection = false;
+            this.canvas.getObjects().forEach(obj => {
+                obj.set({ selectable: false, evented: false });
+            });
         } else if (tool === 'pan') {
             this.canvas.isDrawingMode = false;
             this.canvas.defaultCursor = 'grab';
@@ -495,7 +556,7 @@ export class CanvasManager {
             this.canvas.getObjects().forEach(obj => {
                 let canSelect = true;
 
-                if (obj.type === 'rect' || obj.isEraser) canSelect = false;
+                if (obj.type === 'rect' || obj.isEraser || obj.isSelectionRect) canSelect = false;
 
                 if (this.layerManager && canSelect) {
                     const layer = this.layerManager.layers.find(l => l.id === obj.layerId);
