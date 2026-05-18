@@ -220,15 +220,23 @@ export class CutAreaManager {
                 left: this.clipboardBounds.left,
                 top: this.clipboardBounds.top,
                 layerId: newLayerId,
-                selectable: false,
-                evented: false
+                selectable: true,
+                evented: true
             });
             this.canvas.add(img);
-            this.canvas.renderAll();
-            this.canvasManager.historyManager.saveState();
 
             this.clearSelection();
-            this.canvasManager.setTool('pan');
+
+            const btnSelect = document.getElementById('btn-select');
+            if (btnSelect) {
+                btnSelect.click();
+            } else {
+                this.canvasManager.setTool('select');
+            }
+
+            this.canvas.setActiveObject(img);
+            this.canvas.renderAll();
+            this.canvasManager.historyManager.saveState();
         });
     }
 }

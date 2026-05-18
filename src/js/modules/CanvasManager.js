@@ -15,7 +15,11 @@ export class CanvasManager {
             isDrawingMode: true,
             width: 800,
             height: 600,
-            selection: false
+            selection: false,
+            selectionColor: 'rgba(192, 57, 43, 0.15)',
+            selectionBorderColor: '#c0392b',
+            selectionLineWidth: 1.5,
+            selectionDashArray: [5, 5]
         });
 
         this.workspace = this.canvas.wrapperEl.parentElement;
@@ -61,6 +65,13 @@ export class CanvasManager {
         this.onBrushSizeChange = null;
         this.onSpaceToggle = null;
 
+        fabric.ActiveSelection.prototype.borderColor = '#c0392b';
+        fabric.ActiveSelection.prototype.cornerColor = '#c0392b';
+        fabric.ActiveSelection.prototype.cornerSize = 8;
+        fabric.ActiveSelection.prototype.transparentCorners = false;
+        fabric.ActiveSelection.prototype.selectable = true;
+        fabric.ActiveSelection.prototype.evented = true;
+
         this.init();
 
         this.layerCanvas = document.createElement('canvas');
@@ -96,10 +107,17 @@ export class CanvasManager {
             }
 
             const layerObjects = {};
+            const topLevelObjects = [];
+
             for (let i = 0, len = objects.length; i < len; ++i) {
                 const obj = objects[i];
                 const layerId = obj.layerId;
-                if (!layerId) continue;
+
+                if (!layerId) {
+                    topLevelObjects.push(obj);
+                    continue;
+                }
+
                 if (!layerObjects[layerId]) layerObjects[layerId] = [];
                 layerObjects[layerId].push(obj);
             }
@@ -134,6 +152,10 @@ export class CanvasManager {
                 ctx.globalCompositeOperation = layer.blendMode || 'source-over';
                 ctx.drawImage(this.layerCanvas, 0, 0);
                 ctx.restore();
+            }
+
+            for (let i = 0; i < topLevelObjects.length; i++) {
+                topLevelObjects[i].render(ctx);
             }
         };
     }
@@ -244,7 +266,9 @@ export class CanvasManager {
                 this.historyManager.redo();
             } else if (e.key === 'Shift' && !this.isShiftPressed && !isInput) {
                 this.isShiftPressed = true;
-                this.canvas.isDrawingMode = false;
+                if (this.currentTool !== 'select') {
+                    this.canvas.isDrawingMode = false;
+                }
             } else if (e.key === 'Alt' && !isInput) {
                 e.preventDefault();
                 this.isAltPressed = true;
@@ -306,7 +330,7 @@ export class CanvasManager {
             const activeLayer = this.layerManager ? this.layerManager.layers.find(l => l.id === this.layerManager.activeLayerId) : null;
             const layerPrevent = activeLayer && (activeLayer.locked || !activeLayer.visible);
 
-            if (e.shiftKey || this.isShiftPressed || this.isResizingBrush) {
+            if ((e.shiftKey || this.isShiftPressed || this.isResizingBrush) && this.currentTool !== 'select') {
                 e.preventDefault();
                 e.stopImmediatePropagation();
                 return;
@@ -329,14 +353,16 @@ export class CanvasManager {
             const layerPrevent = activeLayer && (activeLayer.locked || !activeLayer.visible);
 
             if (e.shiftKey || this.isShiftPressed) {
-                e.preventDefault();
-                e.stopImmediatePropagation();
-                this.isResizingBrush = true;
-                this.canvas.isDrawingMode = false;
-                this.resizeStartPosX = e.clientX;
-                this.initialBrushSize = this.brushSize;
-                this.cursorManager.updateSystemCursor(false, false);
-                return;
+                if (this.currentTool !== 'select') {
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+                    this.isResizingBrush = true;
+                    this.canvas.isDrawingMode = false;
+                    this.resizeStartPosX = e.clientX;
+                    this.initialBrushSize = this.brushSize;
+                    this.cursorManager.updateSystemCursor(false, false);
+                    return;
+                }
             }
 
             if (e.button === 1 || this.isSpacePressed || this.currentTool === 'pan') {
