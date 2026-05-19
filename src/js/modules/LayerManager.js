@@ -325,7 +325,12 @@ export class LayerManager {
 
     restoreLayersState(state) {
         this.layers = JSON.parse(JSON.stringify(state.layers));
-        this.activeLayerId = state.activeLayerId;
+
+        const currentLayerExists = this.layers.some(l => l.id === this.activeLayerId);
+
+        if (!currentLayerExists || !this.activeLayerId) {
+            this.activeLayerId = state.activeLayerId;
+        }
 
         const layer = this.layers.find(l => l.id === this.activeLayerId);
         if (layer) {
