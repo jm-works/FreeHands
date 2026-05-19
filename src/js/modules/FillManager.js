@@ -97,7 +97,8 @@ export class FillManager {
                 left: 0,
                 top: 0,
                 selectable: false,
-                evented: false
+                evented: false,
+                layerId: this.canvasManager.layerManager ? this.canvasManager.layerManager.activeLayerId : null
             });
             this.canvas.add(img);
             this.canvas.requestRenderAll();

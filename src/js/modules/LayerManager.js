@@ -120,7 +120,8 @@ export class LayerManager {
 
         const objectsToClone = this.canvas.getObjects().filter(obj => obj.layerId === id);
         if (objectsToClone.length > 0) {
-            fabric.util.enlivenObjects(objectsToClone, (clones) => {
+            const clonePromises = objectsToClone.map(obj => new Promise(resolve => obj.clone(resolve)));
+            Promise.all(clonePromises).then(clones => {
                 clones.forEach(clone => {
                     clone.layerId = newId;
                     this.canvas.add(clone);

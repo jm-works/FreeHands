@@ -170,7 +170,7 @@ export const EraserBrush = fabric.util.createClass(fabric.BaseBrush, {
         const objects = canvas.getObjects().filter(obj =>
             (activeLayerId ? obj.layerId === activeLayerId : true) &&
             !obj.isEraser &&
-            obj.type !== 'rect'
+            !obj.isBg
         );
 
         const eraserBbox = eraserPath.getBoundingRect();

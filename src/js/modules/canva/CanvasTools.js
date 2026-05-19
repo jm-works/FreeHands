@@ -49,11 +49,8 @@ export class CanvasTools {
             brush.decimate = 1.5;
             this._setupDrawingTool(brush);
         } else if (tool === 'eraser') {
-            this.cm.canvas.isDrawingMode = true;
             const eraser = new EraserBrush(this.cm.canvas);
-            eraser.width = this.cm.brushSize;
-            this.cm.canvas.freeDrawingBrush = eraser;
-            this.cm.canvas.defaultCursor = 'none';
+            this._setupDrawingTool(eraser);
         } else if (CROSSHAIR_TOOLS.has(tool)) {
             this.cm.canvas.isDrawingMode = false;
             this.cm.canvas.defaultCursor = 'crosshair';
@@ -115,11 +112,26 @@ export class CanvasTools {
     }
 
     getBrushColorAsRGBA() {
-        const hex = this.cm.brushColor.replace('#', '');
-        const r = parseInt(hex.substring(0, 2), 16);
-        const g = parseInt(hex.substring(2, 4), 16);
-        const b = parseInt(hex.substring(4, 6), 16);
-        return `rgba(${r}, ${g}, ${b}, ${this.cm.brushOpacity})`;
+        let hex = this.cm.brushColor.trim();
+        if (hex.startsWith('#')) {
+            hex = hex.replace('#', '');
+            if (hex.length === 3) {
+                hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+            }
+            if (hex.length === 6) {
+                const r = parseInt(hex.substring(0, 2), 16);
+                const g = parseInt(hex.substring(2, 4), 16);
+                const b = parseInt(hex.substring(4, 6), 16);
+                return `rgba(${r}, ${g}, ${b}, ${this.cm.brushOpacity})`;
+            }
+        }
+        const tmp = document.createElement('canvas');
+        tmp.width = 1; tmp.height = 1;
+        const ctx = tmp.getContext('2d');
+        ctx.fillStyle = this.cm.brushColor;
+        ctx.fillRect(0, 0, 1, 1);
+        const d = ctx.getImageData(0, 0, 1, 1).data;
+        return `rgba(${d[0]}, ${d[1]}, ${d[2]}, ${this.cm.brushOpacity})`;
     }
 
     setBrushOpacity(opacity) {

@@ -8,10 +8,10 @@ export class HistoryManager {
     }
 
     saveState() {
-        if (this.isProcessing || !this.canvasManager.layerManager) return;
+        if (this.isProcessing || !this.canvasManager.layerManager || !this.canvas) return;
 
         const state = {
-            canvas: this.canvas.toJSON(['layerId']),
+            canvas: this.canvas.toJSON(['layerId', 'isBg']),
             layers: this.canvasManager.layerManager.getLayersState()
         };
 
@@ -34,6 +34,18 @@ export class HistoryManager {
 
             this.canvas.loadFromJSON(prevState.canvas, () => {
                 this.canvasManager.layerManager.restoreLayersState(prevState.layers);
+                if (this.canvasManager.textureHandler) {
+                    const orig = this.canvasManager.textureHandler.setPaperTexture.bind(this.canvasManager.textureHandler);
+                    const textureId = this.canvasManager.textureHandler.currentTextureId;
+                    if (textureId && textureId !== 'none') {
+                        this.canvasManager.textureHandler.setPaperTexture(textureId, true);
+                        setTimeout(() => {
+                            this.canvas.renderAll();
+                            this.isProcessing = false;
+                        }, 50);
+                        return;
+                    }
+                }
                 this.canvas.renderAll();
                 this.isProcessing = false;
             });
@@ -50,6 +62,17 @@ export class HistoryManager {
 
             this.canvas.loadFromJSON(nextState.canvas, () => {
                 this.canvasManager.layerManager.restoreLayersState(nextState.layers);
+                if (this.canvasManager.textureHandler) {
+                    const textureId = this.canvasManager.textureHandler.currentTextureId;
+                    if (textureId && textureId !== 'none') {
+                        this.canvasManager.textureHandler.setPaperTexture(textureId, true);
+                        setTimeout(() => {
+                            this.canvas.renderAll();
+                            this.isProcessing = false;
+                        }, 50);
+                        return;
+                    }
+                }
                 this.canvas.renderAll();
                 this.isProcessing = false;
             });

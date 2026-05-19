@@ -132,11 +132,13 @@ export class CanvasEvents {
                     clearInterval(this.cm.keyboardDrawInterval);
                     this.cm.keyboardDrawInterval = null;
 
-                    this.cm.canvas.freeDrawingBrush.onMouseUp({
-                        e: {
-                            pointerType: 'mouse'
-                        }
-                    });
+                    if (this.cm.canvas.freeDrawingBrush) {
+                        this.cm.canvas.freeDrawingBrush.onMouseUp({
+                            e: {
+                                pointerType: 'mouse'
+                            }
+                        });
+                    }
                 }
 
                 return;
@@ -344,14 +346,14 @@ export class CanvasEvents {
             if (this.cm.isResizingBrush) {
                 this.cm.isResizingBrush = false;
                 this.cm.cursorManager.updatePosition(e.clientX, e.clientY);
-                if (!this.cm.isShiftPressed && !this.cm.isSpacePressed && (this.cm.currentTool === 'brush' || this.cm.currentTool === 'eraser')) {
+                if (!this.cm.isShiftPressed && !this.cm.isSpacePressed && (this.cm.currentTool === 'brush' || this.cm.currentTool === 'pen' || this.cm.currentTool === 'eraser')) {
                     this.cm.canvas.isDrawingMode = true;
                 }
             }
 
             if (this.cm.isPanning) {
                 this.cm.isPanning = false;
-                if (!this.cm.isShiftPressed && !this.cm.isSpacePressed && (this.cm.currentTool === 'brush' || this.cm.currentTool === 'eraser')) {
+                if (!this.cm.isShiftPressed && !this.cm.isSpacePressed && (this.cm.currentTool === 'brush' || this.cm.currentTool === 'pen' || this.cm.currentTool === 'eraser')) {
                     this.cm.canvas.isDrawingMode = true;
                 }
                 this.cm.cursorManager.updateSystemCursor(this.cm.isSpacePressed, this.cm.isPanning);
