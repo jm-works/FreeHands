@@ -18,6 +18,7 @@ export class LineManager {
             selectable: false,
             evented: false,
             strokeLineCap: 'round',
+            padding: 15,
             layerId: this.cm.layerManager ? this.cm.layerManager.activeLayerId : null
         });
         this.canvas.add(this.shape);
@@ -42,6 +43,7 @@ export class LineManager {
         }
 
         this.shape.set({ x2: endX, y2: endY });
+        this.shape.setCoords();
         this.canvas.requestRenderAll();
     }
 
@@ -52,6 +54,7 @@ export class LineManager {
         if (this.shape.x1 === this.shape.x2 && this.shape.y1 === this.shape.y2) {
             this.canvas.remove(this.shape);
         } else {
+            this.shape.setCoords();
             this.cm.historyManager.saveState();
         }
         this.shape = null;

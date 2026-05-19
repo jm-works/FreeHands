@@ -84,8 +84,9 @@ export class CanvasTools {
                     cornerColor: '#c0392b',
                     cornerSize: 8,
                     transparentCorners: false,
-                    padding: obj.type === 'line' ? 10 : 0
+                    padding: obj.type === 'line' ? 15 : 0
                 });
+                obj.setCoords();
             });
             this.cm.canvas.requestRenderAll();
         }
