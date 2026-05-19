@@ -5,6 +5,7 @@ import { LayerManager } from '../LayerManager.js';
 import { CutAreaManager } from '../CutAreaManager.js';
 import { RectangleManager } from '../RectangleManager.js';
 import { EllipseManager } from '../EllipseManager.js';
+import { AlignmentGuides } from '../AlignmentGuides.js';
 
 import { CanvasRenderer } from './CanvasRenderer.js';
 import { CanvasEvents } from './CanvasEvents.js';
@@ -79,6 +80,8 @@ export class CanvasManager {
         this.rectangleManager = new RectangleManager(this);
         this.ellipseManager = new EllipseManager(this);
         this.layerManager = new LayerManager(this);
+        this.alignmentGuides = new AlignmentGuides(this);
+
         this.canvas.layerManager = this.layerManager;
         this.canvas.historyManager = this.historyManager;
 
