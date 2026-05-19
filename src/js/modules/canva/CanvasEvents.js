@@ -256,6 +256,16 @@ export class CanvasEvents {
                 return;
             }
 
+            if (this.cm.currentTool === 'line') {
+                e.preventDefault();
+                e.stopPropagation();
+                const rect = this.cm.board.getBoundingClientRect();
+                const x = (e.clientX - rect.left) / this.cm.zoom;
+                const y = (e.clientY - rect.top) / this.cm.zoom;
+                this.cm.lineManager.onMouseDown(x, y);
+                return;
+            }
+
             if (this.cm.currentTool === 'fill') {
                 e.preventDefault();
                 e.stopPropagation();
@@ -293,6 +303,13 @@ export class CanvasEvents {
                 this.cm.rectangleManager.onMouseMove(x, y, e.shiftKey || this.cm.isShiftPressed);
             }
 
+            if (this.cm.currentTool === 'line') {
+                const rect = this.cm.board.getBoundingClientRect();
+                const x = (e.clientX - rect.left) / this.cm.zoom;
+                const y = (e.clientY - rect.top) / this.cm.zoom;
+                this.cm.lineManager.onMouseMove(x, y, e.shiftKey || this.cm.isShiftPressed);
+            }
+
             if (this.cm.currentTool === 'ellipse') {
                 const rect = this.cm.board.getBoundingClientRect();
                 const x = (e.clientX - rect.left) / this.cm.zoom;
@@ -319,7 +336,7 @@ export class CanvasEvents {
                 this.cm.lastPosY = e.clientY;
                 this.cm.updateTransform();
             } else if (!this.cm.isSpacePressed && !e.shiftKey && !this.cm.isShiftPressed) {
-                if (this.cm.currentTool === 'fill' || this.cm.currentTool === 'pan' || this.cm.currentTool === 'select' || this.cm.currentTool === 'cutarea' || this.cm.currentTool === 'rectangle' || this.cm.currentTool === 'ellipse') {
+                if (this.cm.currentTool === 'fill' || this.cm.currentTool === 'pan' || this.cm.currentTool === 'select' || this.cm.currentTool === 'cutarea' || this.cm.currentTool === 'rectangle' || this.cm.currentTool === 'ellipse' || this.cm.currentTool === 'line') {
                     this.cm.cursorManager.hide();
                 } else {
                     this.cm.cursorManager.updatePosition(e.clientX, e.clientY);
@@ -337,6 +354,10 @@ export class CanvasEvents {
 
             if (this.cm.currentTool === 'rectangle') {
                 this.cm.rectangleManager.onMouseUp();
+            }
+
+            if (this.cm.currentTool === 'line') {
+                this.cm.lineManager.onMouseUp();
             }
 
             if (this.cm.currentTool === 'ellipse') {
@@ -400,7 +421,7 @@ export class CanvasEvents {
         });
 
         this.cm.workspace.addEventListener('pointerenter', () => {
-            if (!this.cm.isSpacePressed && !this.cm.isResizingBrush && this.cm.currentTool !== 'fill' && this.cm.currentTool !== 'pan' && this.cm.currentTool !== 'select' && this.cm.currentTool !== 'cutarea' && this.cm.currentTool !== 'rectangle' && this.cm.currentTool !== 'ellipse') {
+            if (!this.cm.isSpacePressed && !this.cm.isResizingBrush && this.cm.currentTool !== 'fill' && this.cm.currentTool !== 'pan' && this.cm.currentTool !== 'select' && this.cm.currentTool !== 'cutarea' && this.cm.currentTool !== 'rectangle' && this.cm.currentTool !== 'ellipse' && this.cm.currentTool !== 'line') {
                 this.cm.cursorManager.show();
             }
             this.cm.canvas.calcOffset();

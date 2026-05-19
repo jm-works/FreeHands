@@ -297,7 +297,7 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.addEventListener('click', () => {
             const toolId = btn.id;
 
-            if (toolId === 'btn-brush' || toolId === 'btn-pen' || toolId === 'btn-rectangle' || toolId === 'btn-ellipse') {
+            if (toolId === 'btn-brush' || toolId === 'btn-pen' || toolId === 'btn-rectangle' || toolId === 'btn-ellipse' || toolId === 'btn-line') {
                 sizeContainer.style.display = 'block';
                 opacityContainer.style.display = 'block';
                 toleranceContainer.style.display = 'none';
@@ -330,6 +330,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     break;
                 case 'btn-rectangle':
                     canvasManager.setTool('rectangle');
+                    break;
+                case 'btn-line':
+                    canvasManager.setTool('line');
                     break;
                 case 'btn-ellipse':
                     canvasManager.setTool('ellipse');

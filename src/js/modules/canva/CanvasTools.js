@@ -3,9 +3,9 @@ import { EraserBrush } from '../EraserBrush.js';
 
 const DRAWING_TOOLS = new Set(['brush', 'pen', 'eraser']);
 
-const CROSSHAIR_TOOLS = new Set(['fill', 'cutarea', 'rectangle', 'ellipse']);
+const CROSSHAIR_TOOLS = new Set(['fill', 'cutarea', 'rectangle', 'ellipse', 'line']);
 
-const SELECTION_DISABLED_TOOLS = new Set(['cutarea', 'rectangle', 'ellipse']);
+const SELECTION_DISABLED_TOOLS = new Set(['cutarea', 'rectangle', 'ellipse', 'line']);
 
 export class CanvasTools {
     constructor(cm) {
