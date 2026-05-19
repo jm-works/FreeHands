@@ -84,16 +84,96 @@ export class CanvasEvents {
                 if (this.cm.currentTool === 'cutarea') {
                     e.preventDefault();
                     this.cm.cutAreaManager.copy();
+                } else if (this.cm.currentTool === 'select') {
+                    const activeObject = this.cm.canvas.getActiveObject();
+                    if (activeObject) {
+                        e.preventDefault();
+                        activeObject.clone((cloned) => {
+                            this.cm._clipboard = cloned;
+                        });
+                    }
                 }
             } else if (isCtrl && e.key.toLowerCase() === 'x' && !isInput) {
                 if (this.cm.currentTool === 'cutarea') {
                     e.preventDefault();
                     this.cm.cutAreaManager.cut();
+                } else if (this.cm.currentTool === 'select') {
+                    const activeObject = this.cm.canvas.getActiveObject();
+                    if (activeObject) {
+                        e.preventDefault();
+                        activeObject.clone((cloned) => {
+                            this.cm._clipboard = cloned;
+                            const activeObjects = this.cm.canvas.getActiveObjects();
+                            activeObjects.forEach(obj => this.cm.canvas.remove(obj));
+                            this.cm.canvas.discardActiveObject();
+                            this.cm.historyManager.saveState();
+                        });
+                    }
                 }
             } else if (isCtrl && e.key.toLowerCase() === 'v' && !isInput) {
-                if (this.cm.cutAreaManager.clipboardDataURL) {
-                    e.preventDefault();
-                    this.cm.cutAreaManager.paste();
+                if (this.cm.currentTool === 'cutarea') {
+                    if (this.cm.cutAreaManager.clipboardDataURL) {
+                        e.preventDefault();
+                        this.cm.cutAreaManager.paste();
+                    }
+                } else if (this.cm.currentTool === 'select') {
+                    if (this.cm._clipboard) {
+                        e.preventDefault();
+                        this.cm._clipboard.clone((clonedObj) => {
+                            this.cm.canvas.discardActiveObject();
+                            clonedObj.set({
+                                left: clonedObj.left + 10,
+                                top: clonedObj.top + 10,
+                                evented: true,
+                                selectable: true
+                            });
+
+                            if (this.cm.layerManager) {
+                                if (!this.cm._copyCount) this.cm._copyCount = 0;
+                                this.cm._copyCount += 1;
+                                this.cm.layerManager.addLayer(`Copy Layer ${this.cm._copyCount}`);
+                            }
+
+                            const activeLayerId = this.cm.layerManager ? this.cm.layerManager.activeLayerId : null;
+
+                            if (clonedObj.type === 'activeSelection') {
+                                clonedObj.canvas = this.cm.canvas;
+                                clonedObj.forEachObject((obj) => {
+                                    obj.set('layerId', activeLayerId);
+                                    obj.set({
+                                        selectable: true,
+                                        evented: true,
+                                        borderColor: '#c0392b',
+                                        cornerColor: '#c0392b',
+                                        cornerSize: 8,
+                                        transparentCorners: false,
+                                        padding: obj.type === 'line' ? 10 : 0
+                                    });
+                                    this.cm.canvas.add(obj);
+                                });
+                                clonedObj.setCoords();
+                            } else {
+                                clonedObj.set('layerId', activeLayerId);
+                                clonedObj.set({
+                                    selectable: true,
+                                    evented: true,
+                                    borderColor: '#c0392b',
+                                    cornerColor: '#c0392b',
+                                    cornerSize: 8,
+                                    transparentCorners: false,
+                                    padding: clonedObj.type === 'line' ? 10 : 0
+                                });
+                                this.cm.canvas.add(clonedObj);
+                            }
+
+                            this.cm._clipboard.top += 10;
+                            this.cm._clipboard.left += 10;
+                            this.cm.canvas.setActiveObject(clonedObj);
+                            if (this.cm.layerManager) this.cm.layerManager.updateZIndices();
+                            this.cm.canvas.requestRenderAll();
+                            this.cm.historyManager.saveState();
+                        });
+                    }
                 }
             } else if (isCtrl && e.key.toLowerCase() === 'z') {
                 e.preventDefault();
@@ -418,6 +498,17 @@ export class CanvasEvents {
 
         this.cm.canvas.on('object:modified', () => {
             this.cm.historyManager.saveState();
+        });
+
+        this.cm.canvas.on('object:rotating', (e) => {
+            const shiftPressed = (e.e && e.e.shiftKey) || this.cm.isShiftPressed;
+            if (shiftPressed) {
+                e.target.snapAngle = 45;
+                e.target.snapThreshold = 45;
+            } else {
+                e.target.snapAngle = 0;
+                e.target.snapThreshold = 0;
+            }
         });
 
         this.cm.workspace.addEventListener('pointerenter', () => {

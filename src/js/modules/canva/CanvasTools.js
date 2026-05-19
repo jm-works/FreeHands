@@ -2,9 +2,7 @@ import { PressureBrush } from '../PressureBrush.js';
 import { EraserBrush } from '../EraserBrush.js';
 
 const DRAWING_TOOLS = new Set(['brush', 'pen', 'eraser']);
-
 const CROSSHAIR_TOOLS = new Set(['fill', 'cutarea', 'rectangle', 'ellipse', 'line']);
-
 const SELECTION_DISABLED_TOOLS = new Set(['cutarea', 'rectangle', 'ellipse', 'line']);
 
 export class CanvasTools {
@@ -72,7 +70,7 @@ export class CanvasTools {
 
             this.cm.canvas.getObjects().forEach(obj => {
                 let canSelect = true;
-                if (obj.type === 'rect' || obj.type === 'ellipse' || obj.isEraser || obj.isSelectionRect) {
+                if (obj.isBg || obj.isEraser || obj.isSelectionRect) {
                     canSelect = false;
                 }
                 if (this.cm.layerManager && canSelect) {
@@ -85,7 +83,8 @@ export class CanvasTools {
                     borderColor: '#c0392b',
                     cornerColor: '#c0392b',
                     cornerSize: 8,
-                    transparentCorners: false
+                    transparentCorners: false,
+                    padding: obj.type === 'line' ? 10 : 0
                 });
             });
             this.cm.canvas.requestRenderAll();
