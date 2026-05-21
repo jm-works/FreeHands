@@ -188,14 +188,27 @@ export class HistoryManager {
             this._restoreLayersState(op.layersState);
 
         } else if (op.type === 'snapshot_legacy') {
-            const prevSnap = this._nearestSnapshot(this.cursor);
-            if (prevSnap) {
-                await this._restoreFullSnapshot(prevSnap.canvasJSON, prevSnap.layersState);
-            } else if (this.cursor >= 0) {
-                const prevOp = this.ops[this.cursor];
-                if (prevOp?.canvasJSON) {
-                    await this._restoreFullSnapshot(prevOp.canvasJSON, prevOp.layersState);
+            let prevJSON = null;
+            let prevLayers = null;
+
+            for (let i = this.cursor; i >= 0; i--) {
+                if (this.ops[i].type === 'snapshot_legacy' && this.ops[i].canvasJSON) {
+                    prevJSON = this.ops[i].canvasJSON;
+                    prevLayers = this.ops[i].layersState;
+                    break;
                 }
+            }
+
+            if (!prevJSON) {
+                const snap = this._nearestSnapshot(this.cursor + 1);
+                if (snap) {
+                    prevJSON = snap.canvasJSON;
+                    prevLayers = snap.layersState;
+                }
+            }
+
+            if (prevJSON) {
+                await this._restoreFullSnapshot(prevJSON, prevLayers);
             }
         }
 
