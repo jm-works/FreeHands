@@ -98,6 +98,8 @@ export class HistoryManager {
 
     async undo() {
         if (this.cursor < 0 || this.isProcessing) return;
+        // op base = estado inicial, não pode ser desfeito
+        if (this.ops[this.cursor].type === 'base') return;
         this.isProcessing = true;
 
         const op = this.ops[this.cursor];
@@ -134,6 +136,7 @@ export class HistoryManager {
 
     async _applyOp(op) {
         switch (op.type) {
+            case 'base': return;
             case 'add':
                 await this._readdObjects(op.snapshots);
                 break;
@@ -173,6 +176,7 @@ export class HistoryManager {
 
     async _applyOpReverse(op) {
         switch (op.type) {
+            case 'base': return;
             case 'add':
                 op.snapshots.forEach(({ uid }) => {
                     const obj = this._findObjectByUID(uid);
@@ -474,6 +478,42 @@ export class HistoryManager {
                 }
                 break;
             }
+
+            case 'duplicate': {
+                lm.layers.splice(op.data.index, 0, { ...op.data.layerSnapshot });
+                await new Promise(resolve => {
+                    fabric.util.enlivenObjects(op.data.objectsJSON, (revived) => {
+                        revived.forEach(obj => {
+                            if (!obj) return;
+                            this._assignUID(obj);
+                            this.canvas.add(obj);
+                        });
+                        lm.updateZIndices();
+                        lm.renderUI();
+                        lm.setActiveLayer(op.data.newId);
+                        this.canvas.requestRenderAll();
+                        resolve();
+                    }, '');
+                });
+                return; // updateZIndices/renderUI já chamados dentro do callback
+            }
+
+            case 'merge': {
+                op.data.affectedObjectsMeta.forEach(({ uid, newLayerId, newOpacity, newGCO }) => {
+                    const obj = this._findObjectByUID(uid);
+                    if (!obj) return;
+                    obj.layerId = newLayerId;
+                    obj.opacity = newOpacity;
+                    obj.globalCompositeOperation = newGCO;
+                });
+                const mergeIdx = lm.layers.findIndex(l => l.id === op.data.sourceId);
+                if (mergeIdx > -1) lm.layers.splice(mergeIdx, 1);
+                lm.updateZIndices();
+                lm.renderUI();
+                lm.setActiveLayer(op.data.belowId);
+                this.canvas.requestRenderAll();
+                return;
+            }
         }
 
         lm.updateZIndices();
@@ -536,6 +576,37 @@ export class HistoryManager {
                     layer[op.data.prop] = op.data.prevValue;
                 }
                 break;
+            }
+
+            case 'duplicate': {
+                // remove objetos clonados do canvas antes de descartar a layer
+                this.canvas.getObjects()
+                    .filter(obj => obj.layerId === op.data.newId)
+                    .forEach(obj => this.canvas.remove(obj));
+                const dupIdx = lm.layers.findIndex(l => l.id === op.data.newId);
+                if (dupIdx > -1) lm.layers.splice(dupIdx, 1);
+                lm.updateZIndices();
+                lm.renderUI();
+                lm.setActiveLayer(op.data.sourceId);
+                this.canvas.requestRenderAll();
+                return;
+            }
+
+            case 'merge': {
+                // restaura props originais antes de reinserir a layer removida
+                op.data.affectedObjectsMeta.forEach(({ uid, originalLayerId, originalOpacity, originalGCO }) => {
+                    const obj = this._findObjectByUID(uid);
+                    if (!obj) return;
+                    obj.layerId = originalLayerId;
+                    obj.opacity = originalOpacity;
+                    obj.globalCompositeOperation = originalGCO;
+                });
+                lm.layers.splice(op.data.index, 0, { ...op.data.layerSnapshot });
+                lm.updateZIndices();
+                lm.renderUI();
+                lm.setActiveLayer(op.data.sourceId);
+                this.canvas.requestRenderAll();
+                return;
             }
         }
 

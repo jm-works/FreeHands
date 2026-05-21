@@ -31,7 +31,7 @@ export class LayerManager {
         this.canvasManager.historyManager.ops = [];
         this.canvasManager.historyManager.cursor = -1;
         this.canvasManager.historyManager.snapshots = [];
-        this.canvasManager.historyManager.saveState();
+        this.canvasManager.historyManager._pushOp({ type: 'base' });
 
         document.addEventListener('click', () => this.closeContextMenu());
     }
@@ -124,25 +124,50 @@ export class LayerManager {
 
         const newId = 'layer_' + Date.now();
         const newLayer = { ...layerToDup, id: newId, name: layerToDup.name + ' copy' };
-
         const index = this.layers.findIndex(l => l.id === id);
+
         this.layers.splice(index, 0, newLayer);
 
         const objectsToClone = this.canvas.getObjects().filter(obj => obj.layerId === id);
+
         if (objectsToClone.length > 0) {
-            const clonePromises = objectsToClone.map(obj => new Promise(resolve => obj.clone(resolve)));
+            const clonePromises = objectsToClone.map(
+                obj => new Promise(resolve => obj.clone(resolve, ['layerId', 'isBg', 'isEraser', '__uid']))
+            );
+
             Promise.all(clonePromises).then(clones => {
                 clones.forEach(clone => {
                     clone.layerId = newId;
+                    this.canvasManager.historyManager._assignUID(clone);
                     this.canvas.add(clone);
                 });
+
                 this.setActiveLayer(newId);
                 this.updateZIndices();
-                this.canvasManager.historyManager.saveState();
+
+                const objectsJSON = this.canvas.getObjects()
+                    .filter(obj => obj.layerId === newId)
+                    .map(obj => obj.toObject(['layerId', 'isBg', 'isEraser', '__uid']));
+
+                this.canvasManager.historyManager.layerCommand('duplicate', {
+                    sourceId: id,
+                    newId,
+                    index,
+                    layerSnapshot: { ...newLayer },
+                    objectsJSON
+                });
             });
         } else {
             this.setActiveLayer(newId);
             this.updateZIndices();
+
+            this.canvasManager.historyManager.layerCommand('duplicate', {
+                sourceId: id,
+                newId,
+                index,
+                layerSnapshot: { ...newLayer },
+                objectsJSON: []
+            });
         }
     }
 
@@ -153,18 +178,44 @@ export class LayerManager {
         const layer = this.layers[index];
         const layerBelow = this.layers[index + 1];
 
+        if (layerBelow.locked) return;
+
         const objects = this.canvas.getObjects().filter(obj => obj.layerId === id);
-        objects.forEach(obj => {
-            obj.layerId = layerBelow.id;
-            obj.opacity = (obj.opacity || 1) * (layer.opacity / 100);
-            if (layer.blendMode !== 'source-over' && !obj.isEraser) {
-                obj.globalCompositeOperation = layer.blendMode;
-            }
+
+        const affectedObjectsMeta = objects.map(obj => {
+            this.canvasManager.historyManager._assignUID(obj);
+            return {
+                uid: obj.__uid,
+                originalLayerId: obj.layerId,
+                originalOpacity: obj.opacity !== undefined ? obj.opacity : 1,
+                originalGCO: obj.globalCompositeOperation || 'source-over',
+                newLayerId: layerBelow.id,
+                newOpacity: (obj.opacity !== undefined ? obj.opacity : 1) * (layer.opacity / 100),
+                newGCO: (layer.blendMode !== 'source-over' && !obj.isEraser)
+                    ? layer.blendMode
+                    : (obj.globalCompositeOperation || 'source-over')
+            };
+        });
+
+        affectedObjectsMeta.forEach(({ uid, newLayerId, newOpacity, newGCO }) => {
+            const obj = this.canvasManager.historyManager._findObjectByUID(uid);
+            if (!obj) return;
+            obj.layerId = newLayerId;
+            obj.opacity = newOpacity;
+            obj.globalCompositeOperation = newGCO;
         });
 
         this.layers.splice(index, 1);
         this.setActiveLayer(layerBelow.id);
-        this.canvasManager.historyManager.saveState();
+        this.updateZIndices();
+
+        this.canvasManager.historyManager.layerCommand('merge', {
+            sourceId: id,
+            belowId: layerBelow.id,
+            index,
+            layerSnapshot: { ...layer },
+            affectedObjectsMeta
+        });
     }
 
     deleteLayer(targetId = this.activeLayerId) {
