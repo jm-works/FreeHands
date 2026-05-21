@@ -82,8 +82,16 @@ export class LayerManager {
         document.getElementById('btn-up-layer').onclick = () => this.moveLayer(-1);
         document.getElementById('btn-down-layer').onclick = () => this.moveLayer(1);
 
-        document.getElementById('layer-opacity-slider').oninput = (e) => this.setLayerProperty('opacity', e.target.value);
-        document.getElementById('layer-blend-mode').onchange = (e) => this.setLayerProperty('blendMode', e.target.value);
+        const opacitySlider = document.getElementById('layer-opacity-slider');
+        opacitySlider.addEventListener('mousedown', (e) => { this._prevOpacity = e.target.value; });
+        opacitySlider.addEventListener('input', (e) => { this.setLayerProperty('opacity', e.target.value, false); });
+        opacitySlider.addEventListener('change', (e) => { this.setLayerProperty('opacity', e.target.value, true, this._prevOpacity); });
+
+        const blendSelect = document.getElementById('layer-blend-mode');
+        blendSelect.addEventListener('focus', (e) => {
+            if (!this._suppressPropertyCommit) this._prevBlend = e.target.value;
+        });
+        blendSelect.addEventListener('change', (e) => { this.setLayerProperty('blendMode', e.target.value, true, this._prevBlend); });
     }
 
     setupCanvasEvents() {
@@ -107,7 +115,7 @@ export class LayerManager {
 
         this.layers.unshift(layer);
         this.setActiveLayer(layer.id);
-        this.canvasManager.historyManager.saveState();
+        this.canvasManager.historyManager.layerCommand('add', { layer: { ...layer }, insertIndex: 0 });
     }
 
     duplicateLayer(id) {
@@ -168,12 +176,18 @@ export class LayerManager {
         const index = this.layers.findIndex(l => l.id === targetId);
         if (index > -1) {
             const objectsToRemove = this.canvas.getObjects().filter(obj => obj.layerId === targetId);
+
+            const removedObjectsJSON = objectsToRemove.map(obj => ({
+                json: obj.toObject(['layerId', 'isBg', 'isEraser', '__uid']),
+                index: this.canvas.getObjects().indexOf(obj)
+            }));
+
             objectsToRemove.forEach(obj => this.canvas.remove(obj));
             this.layers.splice(index, 1);
 
             const nextIndex = Math.min(index, this.layers.length - 1);
             this.setActiveLayer(this.layers[nextIndex].id);
-            this.canvasManager.historyManager.saveState();
+            this.canvasManager.historyManager.layerCommand('delete', { layer: { ...layer }, index, removedObjectsJSON });
         }
     }
 
@@ -187,7 +201,7 @@ export class LayerManager {
             this.layers[newIndex] = temp;
             this.updateZIndices();
             this.renderUI();
-            this.canvasManager.historyManager.saveState();
+            this.canvasManager.historyManager.layerCommand('move', { fromIndex: index, toIndex: newIndex });
         }
     }
 
@@ -196,32 +210,39 @@ export class LayerManager {
 
         const layer = this.layers.find(l => l.id === id);
         if (layer) {
+            this._suppressPropertyCommit = true;
             document.getElementById('layer-opacity-slider').value = layer.opacity;
             document.getElementById('layer-opacity-label').textContent = `${layer.opacity}%`;
             document.getElementById('layer-blend-mode').value = layer.blendMode;
+            setTimeout(() => { this._suppressPropertyCommit = false; }, 0);
         }
 
         this.renderUI();
     }
 
-    setLayerProperty(prop, value) {
+    setLayerProperty(prop, value, commit = true, prevValue = null) {
         const layer = this.layers.find(l => l.id === this.activeLayerId);
         if (!layer) return;
 
         if (prop === 'opacity') {
             layer.opacity = value;
             document.getElementById('layer-opacity-label').textContent = `${value}%`;
-            clearTimeout(this._opacityDebounce);
-            this._opacityDebounce = setTimeout(() => {
-                this.canvasManager.historyManager.saveState();
-            }, 400);
         } else if (prop === 'blendMode') {
             layer.blendMode = value;
-            this.canvasManager.historyManager.saveState();
         }
 
         this._updateActiveLayerMeta();
         this.canvas.requestRenderAll();
+
+        if (commit && prevValue !== null && prevValue !== value) {
+            if (this.canvasManager.historyManager.isProcessing) return;
+            this.canvasManager.historyManager.layerCommand('property', {
+                id: layer.id,
+                prop,
+                prevValue,
+                nextValue: value
+            });
+        }
     }
 
     _updateActiveLayerMeta() {
@@ -317,9 +338,10 @@ export class LayerManager {
     promptRename(layer) {
         promptModal.show('New layer name:', layer.name, (newName) => {
             if (newName && newName.trim() !== '') {
+                const prevName = layer.name;
                 layer.name = newName.trim();
-                this.canvasManager.historyManager.saveState();
                 this.renderUI();
+                this.canvasManager.historyManager.layerCommand('rename', { id: layer.id, prevName, nextName: layer.name });
             }
         });
     }
@@ -448,7 +470,7 @@ export class LayerManager {
 
             this.updateZIndices();
             this.renderUI();
-            this.canvasManager.historyManager.saveState();
+            this.canvasManager.historyManager.layerCommand('move', { fromIndex, toIndex });
             this._dragSrcId = null;
         });
     }
@@ -494,9 +516,11 @@ export class LayerManager {
                 const [moved] = this.layers.splice(fromIndex, 1);
                 this.layers.push(moved);
 
+                const toIndex = this.layers.length - 1;
+
                 this.updateZIndices();
                 this.renderUI();
-                this.canvasManager.historyManager.saveState();
+                this.canvasManager.historyManager.layerCommand('move', { fromIndex, toIndex });
                 this._dragSrcId = null;
             }
         });

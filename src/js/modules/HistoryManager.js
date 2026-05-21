@@ -71,7 +71,7 @@ export class HistoryManager {
 
     /**
      * @param {string} layerId
-     * @returns {Array} array de {uid, json, index}
+     * @returns {Array} 
      */
     snapshotLayerObjects(layerId) {
         return this.canvas.getObjects()
@@ -164,6 +164,10 @@ export class HistoryManager {
             case 'snapshot_legacy':
                 await this._restoreSnapshot(op.canvasJSON, op.layersState);
                 break;
+
+            case 'layer':
+                await this._applyLayerOp(op);
+                break;
         }
     }
 
@@ -217,6 +221,10 @@ export class HistoryManager {
                 }
                 break;
             }
+
+            case 'layer':
+                await this._applyLayerOpReverse(op);
+                break;
         }
     }
 
@@ -415,5 +423,125 @@ export class HistoryManager {
                 resolve(dataURL);
             });
         });
+    }
+
+    /**
+     * @param {'add'|'delete'|'move'|'rename'|'property'} action
+     * @param {Object} data
+     */
+    layerCommand(action, data) {
+        this._pushOp({ type: 'layer', action, data });
+    }
+
+    async _applyLayerOp(op) {
+        const lm = this.canvasManager.layerManager;
+
+        switch (op.action) {
+            case 'add':
+                lm.layers.splice(op.data.insertIndex, 0, op.data.layer);
+                lm.setActiveLayer(op.data.layer.id);
+                break;
+
+            case 'delete': {
+                const toRemove = this.canvas.getObjects().filter(o => o.layerId === op.data.layer.id);
+                toRemove.forEach(o => this.canvas.remove(o));
+                const idx = lm.layers.findIndex(l => l.id === op.data.layer.id);
+                if (idx > -1) lm.layers.splice(idx, 1);
+                if (lm.activeLayerId === op.data.layer.id) {
+                    const nextIdx = Math.min(op.data.index, lm.layers.length - 1);
+                    if (nextIdx >= 0) lm.setActiveLayer(lm.layers[nextIdx].id);
+                }
+                break;
+            }
+
+            case 'move': {
+                const [moved] = lm.layers.splice(op.data.fromIndex, 1);
+                lm.layers.splice(op.data.toIndex, 0, moved);
+                break;
+            }
+
+            case 'rename': {
+                const layer = lm.layers.find(l => l.id === op.data.id);
+                if (layer) layer.name = op.data.nextName;
+                break;
+            }
+
+            case 'property': {
+                const layer = lm.layers.find(l => l.id === op.data.id);
+                if (layer) {
+                    layer[op.data.prop] = op.data.nextValue;
+                    if (lm.activeLayerId === op.data.id) lm.setActiveLayer(op.data.id);
+                }
+                break;
+            }
+        }
+
+        lm.updateZIndices();
+        lm.renderUI();
+        this.canvas.requestRenderAll();
+    }
+
+    async _applyLayerOpReverse(op) {
+        const lm = this.canvasManager.layerManager;
+
+        switch (op.action) {
+            case 'add': {
+                const toRemove = this.canvas.getObjects().filter(o => o.layerId === op.data.layer.id);
+                toRemove.forEach(o => this.canvas.remove(o));
+                const idx = lm.layers.findIndex(l => l.id === op.data.layer.id);
+                if (idx > -1) lm.layers.splice(idx, 1);
+                if (lm.layers.length > 0) {
+                    const fallback = Math.min(op.data.insertIndex, lm.layers.length - 1);
+                    lm.setActiveLayer(lm.layers[fallback].id);
+                }
+                break;
+            }
+
+            case 'delete': {
+                lm.layers.splice(op.data.index, 0, op.data.layer);
+                if (op.data.removedObjectsJSON && op.data.removedObjectsJSON.length > 0) {
+                    await new Promise(resolve => {
+                        const jsons = op.data.removedObjectsJSON.map(o => o.json);
+                        fabric.util.enlivenObjects(jsons, (revived) => {
+                            revived.forEach((obj, i) => {
+                                if (!obj) return;
+                                const original = op.data.removedObjectsJSON[i];
+                                if (original.json.__uid) obj.__uid = original.json.__uid;
+                                const safeIndex = Math.min(original.index, this.canvas.getObjects().length);
+                                this.canvas.insertAt(obj, safeIndex, false);
+                            });
+                            resolve();
+                        }, '');
+                    });
+                }
+                lm.setActiveLayer(op.data.layer.id);
+                break;
+            }
+
+            case 'move': {
+                const [moved] = lm.layers.splice(op.data.toIndex, 1);
+                lm.layers.splice(op.data.fromIndex, 0, moved);
+                break;
+            }
+
+            case 'rename': {
+                const layer = lm.layers.find(l => l.id === op.data.id);
+                if (layer) layer.name = op.data.prevName;
+                break;
+            }
+
+            case 'property': {
+                const layer = lm.layers.find(l => l.id === op.data.id);
+                if (layer) {
+                    layer[op.data.prop] = op.data.prevValue;
+                }
+                break;
+            }
+        }
+
+        lm.updateZIndices();
+        lm.renderUI();
+        lm.setActiveLayer(lm.activeLayerId);
+        this.canvas.requestRenderAll();
     }
 }
