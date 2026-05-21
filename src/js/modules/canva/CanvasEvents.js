@@ -72,9 +72,10 @@ export class CanvasEvents {
                     const activeObjects = this.cm.canvas.getActiveObjects();
                     if (activeObjects.length > 0) {
                         e.preventDefault();
+                        this.cm.historyManager.removeCommand(activeObjects);
                         activeObjects.forEach(obj => this.cm.canvas.remove(obj));
                         this.cm.canvas.discardActiveObject();
-                        this.cm.historyManager.saveState();
+                        this.cm.canvas.requestRenderAll();
                     }
                 } else if (this.cm.currentTool === 'cutarea') {
                     e.preventDefault();
@@ -104,9 +105,10 @@ export class CanvasEvents {
                         activeObject.clone((cloned) => {
                             this.cm._clipboard = cloned;
                             const activeObjects = this.cm.canvas.getActiveObjects();
+                            this.cm.historyManager.removeCommand(activeObjects);
                             activeObjects.forEach(obj => this.cm.canvas.remove(obj));
                             this.cm.canvas.discardActiveObject();
-                            this.cm.historyManager.saveState();
+                            this.cm.canvas.requestRenderAll();
                         });
                     }
                 }
@@ -171,7 +173,12 @@ export class CanvasEvents {
                             this.cm.canvas.setActiveObject(clonedObj);
                             if (this.cm.layerManager) this.cm.layerManager.updateZIndices();
                             this.cm.canvas.requestRenderAll();
-                            this.cm.historyManager.saveState();
+
+                            const pastedObjects = clonedObj.type === 'activeSelection'
+                                ? clonedObj.getObjects()
+                                : [clonedObj];
+                            pastedObjects.forEach(obj => this.cm.historyManager._assignUID(obj));
+                            this.cm.historyManager.addCommand(pastedObjects);
                         });
                     }
                 }
@@ -489,26 +496,71 @@ export class CanvasEvents {
             if (zoomDisplay) zoomDisplay.textContent = `Zoom: ${Math.round(this.cm.zoom * 100)}%`;
         }, { passive: false });
 
+        this.cm.canvas.on('mouse:down', (e) => {
+            const target = e.target;
+            if (!target) return;
+
+            const targets = (target.type === 'activeSelection')
+                ? target.getObjects()
+                : [target];
+
+            targets.forEach(obj => {
+                obj._prevTransformProps = {
+                    left: obj.left,
+                    top: obj.top,
+                    scaleX: obj.scaleX,
+                    scaleY: obj.scaleY,
+                    angle: obj.angle,
+                    flipX: obj.flipX,
+                    flipY: obj.flipY,
+                    width: obj.width,
+                    height: obj.height,
+                    opacity: obj.opacity,
+                };
+            });
+        });
+
         this.cm.canvas.on('path:created', (e) => {
-            if (e.path && this.cm.layerManager) {
+            if (!e.path) return;
+            if (this.cm.layerManager) {
                 e.path.layerId = this.cm.layerManager.activeLayerId;
             }
-            this.cm.historyManager.saveState();
+            this.cm.historyManager._assignUID(e.path);
+            this.cm.historyManager.addCommand(e.path);
         });
 
-        this.cm.canvas.on('object:modified', () => {
-            this.cm.historyManager.saveState();
-        });
+        this.cm.canvas.on('object:modified', (e) => {
+            const target = e.target;
+            if (!target) { this.cm.historyManager.saveState(); return; }
 
-        this.cm.canvas.on('object:rotating', (e) => {
-            const shiftPressed = (e.e && e.e.shiftKey) || this.cm.isShiftPressed;
-            if (shiftPressed) {
-                e.target.snapAngle = 45;
-                e.target.snapThreshold = 45;
-            } else {
-                e.target.snapAngle = 0;
-                e.target.snapThreshold = 0;
+            const targets = (target.type === 'activeSelection')
+                ? target.getObjects()
+                : [target];
+
+            const validTargets = targets.filter(obj => obj._prevTransformProps);
+
+            if (validTargets.length === 0) {
+                this.cm.historyManager.saveState();
+                return;
             }
+
+            const prevProps = validTargets.map(obj => ({ ...obj._prevTransformProps }));
+            const nextProps = validTargets.map(obj => ({
+                left: obj.left,
+                top: obj.top,
+                scaleX: obj.scaleX,
+                scaleY: obj.scaleY,
+                angle: obj.angle,
+                flipX: obj.flipX,
+                flipY: obj.flipY,
+                width: obj.width,
+                height: obj.height,
+                opacity: obj.opacity,
+            }));
+
+            validTargets.forEach(obj => this.cm.historyManager._assignUID(obj));
+            this.cm.historyManager.modifyCommand(validTargets, prevProps, nextProps);
+            validTargets.forEach(obj => delete obj._prevTransformProps);
         });
 
         this.cm.workspace.addEventListener('pointerenter', () => {
