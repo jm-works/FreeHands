@@ -311,13 +311,20 @@ export class LayerManager {
         const layer = this.layers.find(l => l.id === id);
         if (!layer) return;
 
+        const prevValue = layer[prop];
         layer[prop] = !layer[prop];
 
         if (prop === 'visible') {
             this.canvas.requestRenderAll();
         }
         this.renderUI();
-        this.canvasManager.historyManager.saveState();
+
+        this.canvasManager.historyManager.layerCommand('property', {
+            id,
+            prop,
+            prevValue,
+            nextValue: layer[prop]
+        });
     }
 
     updateZIndices() {

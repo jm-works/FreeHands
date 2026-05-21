@@ -55,7 +55,8 @@ export class LineManager {
             this.canvas.remove(this.shape);
         } else {
             this.shape.setCoords();
-            this.cm.historyManager.saveState();
+            this.cm.historyManager._assignUID(this.shape);
+            this.cm.historyManager.addCommand(this.shape);
         }
         this.shape = null;
     }

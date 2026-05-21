@@ -96,28 +96,31 @@ export class HistoryManager {
         });
     }
 
-    async undo() {
+    undo() {
         if (this.cursor < 0 || this.isProcessing) return;
-        // op base = estado inicial, não pode ser desfeito
         if (this.ops[this.cursor].type === 'base') return;
+
+        // Set flag synchronously before any await — prevents re-entry from rapid keydown events
         this.isProcessing = true;
 
         const op = this.ops[this.cursor];
-        await this._applyOpReverse(op);
-        this.cursor--;
-
-        this.isProcessing = false;
+        this._applyOpReverse(op).then(() => {
+            this.cursor--;
+            this.isProcessing = false;
+        });
     }
 
-    async redo() {
+    redo() {
         if (this.cursor >= this.ops.length - 1 || this.isProcessing) return;
+
+        // Set flag synchronously before any await
         this.isProcessing = true;
 
         this.cursor++;
         const op = this.ops[this.cursor];
-        await this._applyOp(op);
-
-        this.isProcessing = false;
+        this._applyOp(op).then(() => {
+            this.isProcessing = false;
+        });
     }
 
     _pushOp(op) {
@@ -495,7 +498,7 @@ export class HistoryManager {
                         resolve();
                     }, '');
                 });
-                return; // updateZIndices/renderUI já chamados dentro do callback
+                return;
             }
 
             case 'merge': {
@@ -579,7 +582,6 @@ export class HistoryManager {
             }
 
             case 'duplicate': {
-                // remove objetos clonados do canvas antes de descartar a layer
                 this.canvas.getObjects()
                     .filter(obj => obj.layerId === op.data.newId)
                     .forEach(obj => this.canvas.remove(obj));
@@ -593,7 +595,6 @@ export class HistoryManager {
             }
 
             case 'merge': {
-                // restaura props originais antes de reinserir a layer removida
                 op.data.affectedObjectsMeta.forEach(({ uid, originalLayerId, originalOpacity, originalGCO }) => {
                     const obj = this._findObjectByUID(uid);
                     if (!obj) return;

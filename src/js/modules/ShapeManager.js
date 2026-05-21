@@ -81,7 +81,8 @@ export class ShapeManager {
         if (this.finalSizeCheck(this.shape)) {
             this.canvas.remove(this.shape);
         } else {
-            this.cm.historyManager.saveState();
+            this.cm.historyManager._assignUID(this.shape);
+            this.cm.historyManager.addCommand(this.shape);
         }
 
         this.shape = null;

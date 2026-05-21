@@ -204,7 +204,7 @@ export class CutAreaManager {
 
         this.canvas.add(eraserRect);
         this.canvas.renderAll();
-        this.canvasManager.historyManager.saveState();
+        this.canvasManager.historyManager.addCommand(eraserRect);
     }
 
     paste() {
@@ -236,7 +236,7 @@ export class CutAreaManager {
 
             this.canvas.setActiveObject(img);
             this.canvas.renderAll();
-            this.canvasManager.historyManager.saveState();
+            this.canvasManager.historyManager.addCommand(img);
         });
     }
 }

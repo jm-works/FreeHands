@@ -491,13 +491,14 @@ export class CanvasEvents {
         });
 
         this.cm.canvas.on('path:created', (e) => {
-            if (e.path && this.cm.layerManager) {
+            if (!e.path || e.path.__historyRegistered) return;
+            e.path.__historyRegistered = true;
+
+            if (this.cm.layerManager) {
                 e.path.layerId = this.cm.layerManager.activeLayerId;
             }
-            if (e.path) {
-                this.cm.historyManager._assignUID(e.path);
-                this.cm.historyManager.addCommand([e.path]);
-            }
+            this.cm.historyManager._assignUID(e.path);
+            this.cm.historyManager.addCommand([e.path]);
         });
 
         this.cm.canvas.on('object:modified', (e) => {
