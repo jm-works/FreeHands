@@ -21,14 +21,16 @@ export class CanvasEvents {
                 e.preventDefault();
                 const zoomFactor = e.key === '-' ? 0.9 : 1.1;
                 const rect = this.cm.workspace.getBoundingClientRect();
-                const w = this.cm.canvas.getWidth();
-                const h = this.cm.canvas.getHeight();
 
-                const px = this.cm.virtualX !== undefined ? (this.cm.virtualX - rect.left) : (rect.width / 2);
-                const py = this.cm.virtualY !== undefined ? (this.cm.virtualY - rect.top) : (rect.height / 2);
+                const px = (this.cm.virtualX !== undefined && this.cm.virtualX >= rect.left && this.cm.virtualX <= rect.right)
+                    ? (this.cm.virtualX - rect.left)
+                    : (rect.width / 2);
+                const py = (this.cm.virtualY !== undefined && this.cm.virtualY >= rect.top && this.cm.virtualY <= rect.bottom)
+                    ? (this.cm.virtualY - rect.top)
+                    : (rect.height / 2);
 
-                const dx = (px - this.cm.offsetX - w / 2) / this.cm.zoom;
-                const dy = (py - this.cm.offsetY - h / 2) / this.cm.zoom;
+                const dx = (px - this.cm.offsetX - rect.width / 2) / this.cm.zoom;
+                const dy = (py - this.cm.offsetY - rect.height / 2) / this.cm.zoom;
 
                 const newZoom = Math.min(Math.max(this.cm.zoom * zoomFactor, 0.1), 20);
 
@@ -574,14 +576,12 @@ export class CanvasEvents {
 
             const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
             const rect = this.cm.workspace.getBoundingClientRect();
-            const w = this.cm.canvas.getWidth();
-            const h = this.cm.canvas.getHeight();
 
             const px = e.clientX - rect.left;
             const py = e.clientY - rect.top;
 
-            const dx = (px - this.cm.offsetX - w / 2) / this.cm.zoom;
-            const dy = (py - this.cm.offsetY - h / 2) / this.cm.zoom;
+            const dx = (px - this.cm.offsetX - rect.width / 2) / this.cm.zoom;
+            const dy = (py - this.cm.offsetY - rect.height / 2) / this.cm.zoom;
 
             const newZoom = Math.min(Math.max(this.cm.zoom * zoomFactor, 0.1), 20);
 
