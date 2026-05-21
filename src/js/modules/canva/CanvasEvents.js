@@ -17,6 +17,33 @@ export class CanvasEvents {
             const isInput = e.target.tagName.toLowerCase() === 'input' || e.target.tagName.toLowerCase() === 'textarea';
             const isArrow = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key);
 
+            if ((e.key === '+' || e.key === '=' || e.key === '-') && !isInput) {
+                e.preventDefault();
+                const zoomFactor = e.key === '-' ? 0.9 : 1.1;
+                const rect = this.cm.workspace.getBoundingClientRect();
+                const w = this.cm.canvas.getWidth();
+                const h = this.cm.canvas.getHeight();
+
+                const px = this.cm.virtualX !== undefined ? (this.cm.virtualX - rect.left) : (rect.width / 2);
+                const py = this.cm.virtualY !== undefined ? (this.cm.virtualY - rect.top) : (rect.height / 2);
+
+                const dx = (px - this.cm.offsetX - w / 2) / this.cm.zoom;
+                const dy = (py - this.cm.offsetY - h / 2) / this.cm.zoom;
+
+                const newZoom = Math.min(Math.max(this.cm.zoom * zoomFactor, 0.1), 20);
+
+                this.cm.offsetX += dx * (this.cm.zoom - newZoom);
+                this.cm.offsetY += dy * (this.cm.zoom - newZoom);
+                this.cm.zoom = newZoom;
+
+                this.cm.updateTransform();
+                this.cm.cursorManager.updateSize(this.cm.brushSize, this.cm.zoom);
+
+                const zoomDisplay = document.getElementById('zoom-val-display');
+                if (zoomDisplay) zoomDisplay.textContent = `Zoom: ${Math.round(this.cm.zoom * 100)}%`;
+                return;
+            }
+
             if (isArrow && !isInput) {
                 const isDrawingTool = this.cm.currentTool === 'brush' || this.cm.currentTool === 'pen' || this.cm.currentTool === 'eraser';
                 if (!isDrawingTool || !this.cm.canvas.freeDrawingBrush) return;
@@ -546,15 +573,21 @@ export class CanvasEvents {
             e.preventDefault();
 
             const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
-            const mouseX = e.clientX;
-            const mouseY = e.clientY;
+            const rect = this.cm.workspace.getBoundingClientRect();
+            const w = this.cm.canvas.getWidth();
+            const h = this.cm.canvas.getHeight();
+
+            const px = e.clientX - rect.left;
+            const py = e.clientY - rect.top;
+
+            const dx = (px - this.cm.offsetX - w / 2) / this.cm.zoom;
+            const dy = (py - this.cm.offsetY - h / 2) / this.cm.zoom;
 
             const newZoom = Math.min(Math.max(this.cm.zoom * zoomFactor, 0.1), 20);
-            const scaleRatio = newZoom / this.cm.zoom;
 
+            this.cm.offsetX += dx * (this.cm.zoom - newZoom);
+            this.cm.offsetY += dy * (this.cm.zoom - newZoom);
             this.cm.zoom = newZoom;
-            this.cm.offsetX = mouseX - (mouseX - this.cm.offsetX) * scaleRatio;
-            this.cm.offsetY = mouseY - (mouseY - this.cm.offsetY) * scaleRatio;
 
             this.cm.updateTransform();
             this.cm.cursorManager.updateSize(this.cm.brushSize, this.cm.zoom);
