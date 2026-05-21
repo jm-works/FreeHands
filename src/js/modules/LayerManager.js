@@ -28,7 +28,9 @@ export class LayerManager {
             isBg: true
         });
         this.canvas.add(bgRect);
-        this.canvasManager.historyManager.undoStack = [];
+        this.canvasManager.historyManager.ops = [];
+        this.canvasManager.historyManager.cursor = -1;
+        this.canvasManager.historyManager.snapshots = [];
         this.canvasManager.historyManager.saveState();
 
         document.addEventListener('click', () => this.closeContextMenu());
@@ -209,8 +211,13 @@ export class LayerManager {
         if (prop === 'opacity') {
             layer.opacity = value;
             document.getElementById('layer-opacity-label').textContent = `${value}%`;
+            clearTimeout(this._opacityDebounce);
+            this._opacityDebounce = setTimeout(() => {
+                this.canvasManager.historyManager.saveState();
+            }, 400);
         } else if (prop === 'blendMode') {
             layer.blendMode = value;
+            this.canvasManager.historyManager.saveState();
         }
 
         this._updateActiveLayerMeta();
@@ -238,6 +245,7 @@ export class LayerManager {
             this.canvas.requestRenderAll();
         }
         this.renderUI();
+        this.canvasManager.historyManager.saveState();
     }
 
     updateZIndices() {
