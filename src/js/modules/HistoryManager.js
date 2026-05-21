@@ -1,329 +1,351 @@
+const SNAPSHOT_EVERY = 15;
+const CUSTOM_FABRIC_PROPS = ['layerId', 'isBg', 'isEraser'];
+
+let _uidCounter = 0;
+
 export class HistoryManager {
+
     constructor(canvasManager) {
-        this.cm = canvasManager;
+        this.canvasManager = canvasManager;
         this.canvas = canvasManager.canvas;
 
         this.ops = [];
         this.cursor = -1;
         this.snapshots = [];
 
-        this.SNAPSHOT_EVERY = 15;
         this.isProcessing = false;
     }
 
-    /**
-     * @param {fabric.Object|fabric.Object[]} objects
-     */
     addCommand(objects) {
-        const arr = [].concat(objects);
-        const layersState = this._captureLayersState();
+        if (!objects || objects.length === 0) return;
+        const arr = Array.isArray(objects) ? objects : [objects];
+        arr.forEach(obj => this._assignUID(obj));
 
         this._pushOp({
             type: 'add',
-            objectsJSON: arr.map(o => o.toJSON(['layerId', 'isBg', 'isEraser', 'globalCompositeOperation'])),
-            layersState
+            snapshots: arr.map(obj => ({
+                uid: obj.__uid,
+                json: obj.toObject(CUSTOM_FABRIC_PROPS),
+                index: this.canvas.getObjects().indexOf(obj)
+            }))
         });
     }
 
-    /**
-     * @param {fabric.Object|fabric.Object[]} objects
-     */
     removeCommand(objects) {
-        const arr = [].concat(objects);
-        const allObjects = this.canvas.getObjects();
-        const layersState = this._captureLayersState();
+        if (!objects || objects.length === 0) return;
+        const arr = Array.isArray(objects) ? objects : [objects];
 
         this._pushOp({
             type: 'remove',
-            objectsJSON: arr.map(o => ({
-                json: o.toJSON(['layerId', 'isBg', 'isEraser', 'globalCompositeOperation']),
-                zIndex: allObjects.indexOf(o)
-            })),
-            layersState
+            snapshots: arr.map(obj => ({
+                uid: obj.__uid || null,
+                json: obj.toObject(CUSTOM_FABRIC_PROPS),
+                index: this.canvas.getObjects().indexOf(obj)
+            }))
         });
     }
 
-    /**
-     * @param {fabric.Object|fabric.Object[]} objects
-     * @param {Object|Object[]} prevProps 
-     * @param {Object|Object[]} nextProps 
-     */
     modifyCommand(objects, prevProps, nextProps) {
-        const arr = [].concat(objects);
-        const prev = [].concat(prevProps);
-        const next = [].concat(nextProps);
-        const layersState = this._captureLayersState();
+        if (!objects || objects.length === 0) return;
+        const arr = Array.isArray(objects) ? objects : [objects];
 
         this._pushOp({
             type: 'modify',
-            patches: arr.map((o, i) => ({
-                objectId: o.__uid,
-                prev: prev[i],
-                next: next[i]
-            })),
-            layersState
+            deltas: arr.map((obj, i) => ({
+                uid: obj.__uid,
+                prev: prevProps[i],
+                next: nextProps[i]
+            }))
         });
     }
 
-    /**
-     * @param {string} prevDataURL
-     * @param {string} nextDataURL
-     * @param {string} affectedLayerId
-     */
-    rasterCommand(prevDataURL, nextDataURL, affectedLayerId) {
-        const layersState = this._captureLayersState();
-
+    rasterCommand(prevDataURL, nextDataURL, layerId) {
         this._pushOp({
             type: 'raster',
-            affectedLayerId,
             prevDataURL,
             nextDataURL,
+            layerId
+        });
+    }
+
+    saveState() {
+        if (this.isProcessing || !this.canvasManager.layerManager || !this.canvas) return;
+
+        const canvasJSON = this.canvas.toJSON(CUSTOM_FABRIC_PROPS);
+        const layersState = this.canvasManager.layerManager.getLayersState();
+
+        this._pushOp({
+            type: 'snapshot_legacy',
+            canvasJSON,
             layersState
         });
     }
 
-    undo() {
+    async undo() {
         if (this.cursor < 0 || this.isProcessing) return;
         this.isProcessing = true;
 
         const op = this.ops[this.cursor];
+        await this._applyOpReverse(op);
         this.cursor--;
 
-        this._applyOpReverse(op).finally(() => {
-            this.isProcessing = false;
-        });
+        this.isProcessing = false;
     }
 
-    redo() {
+    async redo() {
         if (this.cursor >= this.ops.length - 1 || this.isProcessing) return;
         this.isProcessing = true;
 
         this.cursor++;
         const op = this.ops[this.cursor];
+        await this._applyOp(op);
 
-        this._applyOpForward(op).finally(() => {
-            this.isProcessing = false;
-        });
+        this.isProcessing = false;
     }
-
-    saveState() {
-        if (this.isProcessing || !this.cm.layerManager || !this.canvas) return;
-
-        const layersState = this._captureLayersState();
-        this._pushOp({
-            type: 'snapshot_legacy',
-            canvasJSON: this.canvas.toJSON(['layerId', 'isBg', 'isEraser', 'globalCompositeOperation']),
-            layersState
-        });
-    }
-
 
     _pushOp(op) {
         if (this.cursor < this.ops.length - 1) {
-            this.ops = this.ops.slice(0, this.cursor + 1);
-            this.snapshots = this.snapshots.filter(s => s.afterCursor <= this.cursor);
+            this.ops.splice(this.cursor + 1);
+            this.snapshots = this.snapshots.filter(s => s.atCursor <= this.cursor);
         }
 
         this.ops.push(op);
         this.cursor = this.ops.length - 1;
 
-        if (this.cursor > 0 && this.cursor % this.SNAPSHOT_EVERY === 0) {
+        if (this.cursor > 0 && this.cursor % SNAPSHOT_EVERY === 0) {
             this._takeSnapshot();
         }
     }
 
-    async _applyOpForward(op) {
-        if (op.type === 'add') {
-            await this._restoreObjects(op.objectsJSON);
-            this._restoreLayersState(op.layersState);
+    async _applyOp(op) {
+        switch (op.type) {
+            case 'add':
+                await this._readdObjects(op.snapshots);
+                break;
 
-        } else if (op.type === 'remove') {
-            op.objectsJSON.forEach(({ json }) => {
-                const target = this._findObjectByJSON(json);
-                if (target) this.canvas.remove(target);
-            });
-            this._restoreLayersState(op.layersState);
+            case 'remove':
+                op.snapshots.forEach(({ uid }) => {
+                    const obj = this._findObjectByUID(uid);
+                    if (obj) this.canvas.remove(obj);
+                });
+                this.canvas.requestRenderAll();
+                break;
 
-        } else if (op.type === 'modify') {
-            op.patches.forEach(({ objectId, next }) => {
-                const obj = this._findObjectByUID(objectId);
-                if (obj) { obj.set(next); obj.setCoords(); }
-            });
-            this._restoreLayersState(op.layersState);
+            case 'modify':
+                op.deltas.forEach(({ uid, next }) => {
+                    const obj = this._findObjectByUID(uid);
+                    if (obj) {
+                        obj.set(next);
+                        obj.setCoords();
+                    }
+                });
+                this.canvas.requestRenderAll();
+                break;
 
-        } else if (op.type === 'raster') {
-            await this._restoreLayerRaster(op.affectedLayerId, op.nextDataURL);
-            this._restoreLayersState(op.layersState);
+            case 'raster':
+                await this._restoreRasterLayer(op.nextDataURL, op.layerId);
+                break;
 
-        } else if (op.type === 'snapshot_legacy') {
-            await this._restoreFullSnapshot(op.canvasJSON, op.layersState);
+            case 'snapshot_legacy':
+                await this._restoreSnapshot(op.canvasJSON, op.layersState);
+                break;
         }
-
-        this.canvas.requestRenderAll();
     }
 
     async _applyOpReverse(op) {
-        if (op.type === 'add') {
-            op.objectsJSON.forEach(json => {
-                const target = this._findObjectByJSON(json);
-                if (target) this.canvas.remove(target);
-            });
-            this._restoreLayersState(op.layersState);
+        switch (op.type) {
+            case 'add':
+                op.snapshots.forEach(({ uid }) => {
+                    const obj = this._findObjectByUID(uid);
+                    if (obj) this.canvas.remove(obj);
+                });
+                this.canvas.requestRenderAll();
+                break;
 
-        } else if (op.type === 'remove') {
-            for (const { json, zIndex } of op.objectsJSON) {
-                await this._restoreObjectAtIndex(json, zIndex);
-            }
-            this._restoreLayersState(op.layersState);
+            case 'remove':
+                await this._readdObjects(op.snapshots);
+                break;
 
-        } else if (op.type === 'modify') {
-            op.patches.forEach(({ objectId, prev }) => {
-                const obj = this._findObjectByUID(objectId);
-                if (obj) { obj.set(prev); obj.setCoords(); }
-            });
-            this._restoreLayersState(op.layersState);
+            case 'modify':
+                op.deltas.forEach(({ uid, prev }) => {
+                    const obj = this._findObjectByUID(uid);
+                    if (obj) {
+                        obj.set(prev);
+                        obj.setCoords();
+                    }
+                });
+                this.canvas.requestRenderAll();
+                break;
 
-        } else if (op.type === 'raster') {
-            await this._restoreLayerRaster(op.affectedLayerId, op.prevDataURL);
-            this._restoreLayersState(op.layersState);
+            case 'raster':
+                await this._restoreRasterLayer(op.prevDataURL, op.layerId);
+                break;
 
-        } else if (op.type === 'snapshot_legacy') {
-            let prevJSON = null;
-            let prevLayers = null;
-
-            for (let i = this.cursor; i >= 0; i--) {
-                if (this.ops[i].type === 'snapshot_legacy' && this.ops[i].canvasJSON) {
-                    prevJSON = this.ops[i].canvasJSON;
-                    prevLayers = this.ops[i].layersState;
-                    break;
+            case 'snapshot_legacy': {
+                const prevOp = this._findPrevSnapshotLegacy(this.cursor - 1);
+                if (prevOp) {
+                    await this._restoreSnapshot(prevOp.canvasJSON, prevOp.layersState);
+                } else {
+                    this.canvas.clear();
+                    if (this.canvasManager.layerManager) {
+                        this.canvasManager.layerManager.restoreLayersState([]);
+                    }
+                    this.canvas.requestRenderAll();
                 }
-            }
-
-            if (!prevJSON) {
-                const snap = this._nearestSnapshot(this.cursor + 1);
-                if (snap) {
-                    prevJSON = snap.canvasJSON;
-                    prevLayers = snap.layersState;
-                }
-            }
-
-            if (prevJSON) {
-                await this._restoreFullSnapshot(prevJSON, prevLayers);
+                break;
             }
         }
-
-        this.canvas.requestRenderAll();
     }
 
     _takeSnapshot() {
+        if (!this.canvasManager.layerManager) return;
+
         this.snapshots.push({
-            afterCursor: this.cursor,
-            canvasJSON: this.canvas.toJSON(['layerId', 'isBg', 'isEraser', 'globalCompositeOperation']),
-            layersState: this._captureLayersState()
+            atCursor: this.cursor,
+            canvasJSON: this.canvas.toJSON(CUSTOM_FABRIC_PROPS),
+            layersState: this.canvasManager.layerManager.getLayersState()
         });
     }
 
-    _nearestSnapshot(beforeCursor) {
-        for (let i = this.snapshots.length - 1; i >= 0; i--) {
-            if (this.snapshots[i].afterCursor < beforeCursor) return this.snapshots[i];
+    _findSnapshotBefore(cursorTarget) {
+        let best = null;
+        for (const snap of this.snapshots) {
+            if (snap.atCursor <= cursorTarget) best = snap;
+            else break;
+        }
+        return best;
+    }
+
+    _findPrevSnapshotLegacy(fromCursor) {
+        for (let i = fromCursor; i >= 0; i--) {
+            const op = this.ops[i];
+            if (op && op.type === 'snapshot_legacy' && op.canvasJSON) {
+                return op;
+            }
         }
         return null;
     }
 
-    _captureLayersState() {
-        return this.cm.layerManager?.getLayersState() ?? null;
-    }
-
-    _restoreLayersState(layersState) {
-        if (layersState && this.cm.layerManager) {
-            this.cm.layerManager.restoreLayersState(layersState);
+    _assignUID(obj) {
+        if (!obj.__uid) {
+            obj.__uid = `fh_${++_uidCounter}_${Date.now()}`;
         }
-    }
-
-    async _restoreFullSnapshot(canvasJSON, layersState) {
-        return new Promise(resolve => {
-            this.canvas.loadFromJSON(canvasJSON, () => {
-                this._restoreLayersState(layersState);
-                this._handleTextureRestore(resolve);
-            });
-        });
-    }
-
-    _handleTextureRestore(resolve) {
-        const th = this.cm.textureHandler;
-        if (th?.currentTextureId && th.currentTextureId !== 'none') {
-            th.setPaperTexture(th.currentTextureId, true);
-            setTimeout(() => { this.canvas.renderAll(); resolve(); }, 50);
-        } else {
-            this.canvas.renderAll();
-            resolve();
-        }
-    }
-
-    async _restoreObjects(objectsJSONArray) {
-        return new Promise(resolve => {
-            let remaining = objectsJSONArray.length;
-            if (remaining === 0) { resolve(); return; }
-
-            objectsJSONArray.forEach(json => {
-                fabric.util.enlivenObjects([json], ([obj]) => {
-                    if (obj) {
-                        this._assignUID(obj);
-                        this.canvas.add(obj);
-                    }
-                    if (--remaining === 0) resolve();
-                });
-            });
-        });
-    }
-
-    async _restoreObjectAtIndex(json, zIndex) {
-        return new Promise(resolve => {
-            fabric.util.enlivenObjects([json], ([obj]) => {
-                if (obj) {
-                    this._assignUID(obj);
-                    this.canvas.insertAt(obj, zIndex, false);
-                }
-                resolve();
-            });
-        });
-    }
-
-    async _restoreLayerRaster(layerId, dataURL) {
-        return new Promise(resolve => {
-            const toRemove = this.canvas.getObjects().filter(o => o.layerId === layerId);
-            toRemove.forEach(o => this.canvas.remove(o));
-
-            if (!dataURL) { resolve(); return; }
-
-            fabric.Image.fromURL(dataURL, (img) => {
-                img.set({
-                    layerId,
-                    selectable: false,
-                    evented: false,
-                    left: 0,
-                    top: 0
-                });
-                this.canvas.add(img);
-                resolve();
-            });
-        });
-    }
-
-    _findObjectByJSON(json) {
-        return this.canvas.getObjects().find(o =>
-            o.layerId === json.layerId &&
-            Math.abs((o.left ?? 0) - (json.left ?? 0)) < 0.5 &&
-            Math.abs((o.top ?? 0) - (json.top ?? 0)) < 0.5 &&
-            o.type === json.type
-        );
     }
 
     _findObjectByUID(uid) {
-        return this.canvas.getObjects().find(o => o.__uid === uid);
+        if (!uid) return undefined;
+        return this.canvas.getObjects().find(obj => obj.__uid === uid);
     }
 
-    _assignUID(obj) {
-        if (!obj.__uid) obj.__uid = `fh_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    _findObjectByJSON(json) {
+        return this.canvas.getObjects().find(obj =>
+            obj.type === json.type &&
+            Math.abs((obj.left || 0) - (json.left || 0)) < 1 &&
+            Math.abs((obj.top || 0) - (json.top || 0)) < 1
+        );
+    }
+
+    _restoreRasterLayer(dataURL, layerId) {
+        return new Promise((resolve) => {
+            const layerObjects = this.canvas.getObjects().filter(
+                obj => obj.layerId === layerId && !obj.isBg
+            );
+
+            const insertIndex = layerObjects.length > 0
+                ? this.canvas.getObjects().indexOf(layerObjects[0])
+                : -1;
+
+            layerObjects.forEach(obj => this.canvas.remove(obj));
+
+            fabric.Image.fromURL(dataURL, (img) => {
+                img.set({
+                    left: 0,
+                    top: 0,
+                    layerId,
+                    selectable: false,
+                    evented: false,
+                    hasControls: false,
+                    hasBorders: false,
+                    originX: 'left',
+                    originY: 'top'
+                });
+
+                if (insertIndex > -1) {
+                    this.canvas.insertAt(img, insertIndex, false);
+                } else {
+                    this.canvas.add(img);
+                }
+
+                this.canvas.requestRenderAll();
+                resolve();
+            });
+        });
+    }
+
+    _restoreSnapshot(canvasJSON, layersState) {
+        return new Promise((resolve) => {
+            this.canvas.loadFromJSON(canvasJSON, () => {
+                if (this.canvasManager.layerManager) {
+                    this.canvasManager.layerManager.restoreLayersState(layersState);
+                }
+
+                const textureHandler = this.canvasManager.textureHandler;
+                if (textureHandler) {
+                    const textureId = textureHandler.currentTextureId;
+                    if (textureId && textureId !== 'none') {
+                        textureHandler.setPaperTexture(textureId, true);
+                        setTimeout(() => {
+                            this.canvas.renderAll();
+                            resolve();
+                        }, 50);
+                        return;
+                    }
+                }
+
+                this.canvas.renderAll();
+                resolve();
+            });
+        });
+    }
+
+    _readdObjects(snapshots) {
+        return new Promise((resolve) => {
+            if (snapshots.length === 0) { resolve(); return; }
+
+            const jsons = snapshots.map(s => s.json);
+
+            fabric.util.enlivenObjects(jsons, (revived) => {
+                const isSelectTool = this.canvasManager.currentTool === 'select';
+
+                revived.forEach((obj, i) => {
+                    if (!obj) return;
+                    const { uid, index } = snapshots[i];
+                    obj.__uid = uid;
+
+                    if (isSelectTool) {
+                        obj.set({
+                            selectable: true,
+                            evented: true,
+                            borderColor: '#c0392b',
+                            cornerColor: '#c0392b',
+                            cornerSize: 8,
+                            transparentCorners: false
+                        });
+                    }
+
+                    const total = this.canvas.getObjects().length;
+                    const safeIndex = Math.min(index, total);
+
+                    if (safeIndex >= 0 && safeIndex < total) {
+                        this.canvas.insertAt(obj, safeIndex, false);
+                    } else {
+                        this.canvas.add(obj);
+                    }
+                });
+
+                this.canvas.requestRenderAll();
+                resolve();
+            }, '');
+        });
     }
 }

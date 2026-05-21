@@ -24,6 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const introManager = new IntroManager('fh-root', 'fh-c');
 
     const canvasManager = new CanvasManager('drawing-canvas');
+    window._cm = canvasManager;
     const filterManager = new FilterManager(canvasManager);
     const effectManager = new EffectManager(canvasManager);
 
