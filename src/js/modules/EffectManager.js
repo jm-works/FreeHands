@@ -6,7 +6,7 @@ export class EffectManager {
         this.cm = canvasManager;
     }
 
-    open() {
+    async open() {
         const layerManager = this.cm.layerManager;
         const canvas = this.cm.canvas;
         const activeLayerId = layerManager.activeLayerId;
@@ -21,6 +21,9 @@ export class EffectManager {
             alertModal.show('Active layer is empty.');
             return;
         }
+
+        const prevURL = await this.cm.historyManager.captureLayerDataURL(activeLayerId);
+        const prevObjects = this.cm.historyManager.snapshotLayerObjects(activeLayerId);
 
         const defaults = {
             globalOpacity: 1,
@@ -250,12 +253,13 @@ export class EffectManager {
         const confirmBtn = document.createElement('button');
         confirmBtn.className = 'custom-modal-btn confirm';
         confirmBtn.textContent = 'Apply';
-        confirmBtn.onclick = () => {
+        confirmBtn.onclick = async () => {
             if (!previewImg) {
                 document.body.removeChild(overlay);
                 window.removeEventListener('keydown', onKey, { capture: true });
                 return;
             }
+
             layerObjects.forEach(obj => canvas.remove(obj));
             previewImg.set({
                 layerId: activeLayerId,
@@ -265,7 +269,10 @@ export class EffectManager {
                 hasBorders: false
             });
             canvas.requestRenderAll();
-            this.cm.historyManager.saveState();
+
+            const nextURL = await this.cm.historyManager.captureLayerDataURL(activeLayerId);
+            this.cm.historyManager.rasterCommand(prevURL, nextURL, activeLayerId, prevObjects);
+
             document.body.removeChild(overlay);
             window.removeEventListener('keydown', onKey, { capture: true });
         };

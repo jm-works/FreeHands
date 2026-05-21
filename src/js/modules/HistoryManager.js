@@ -59,13 +59,28 @@ export class HistoryManager {
         });
     }
 
-    rasterCommand(prevDataURL, nextDataURL, layerId) {
+    rasterCommand(prevDataURL, nextDataURL, layerId, prevObjects = []) {
         this._pushOp({
             type: 'raster',
             prevDataURL,
             nextDataURL,
+            prevObjects,
             layerId
         });
+    }
+
+    /**
+     * @param {string} layerId
+     * @returns {Array} array de {uid, json, index}
+     */
+    snapshotLayerObjects(layerId) {
+        return this.canvas.getObjects()
+            .filter(obj => obj.layerId === layerId && !obj.isBg)
+            .map(obj => ({
+                uid: obj.__uid || null,
+                json: obj.toObject(CUSTOM_FABRIC_PROPS),
+                index: this.canvas.getObjects().indexOf(obj)
+            }));
     }
 
     saveState() {
@@ -178,7 +193,15 @@ export class HistoryManager {
                 break;
 
             case 'raster':
-                await this._restoreRasterLayer(op.prevDataURL, op.layerId);
+                this.canvas.getObjects()
+                    .filter(obj => obj.layerId === op.layerId && !obj.isBg)
+                    .forEach(obj => this.canvas.remove(obj));
+
+                if (op.prevObjects && op.prevObjects.length > 0) {
+                    await this._readdObjects(op.prevObjects);
+                } else {
+                    this.canvas.requestRenderAll();
+                }
                 break;
 
             case 'snapshot_legacy': {
@@ -346,6 +369,51 @@ export class HistoryManager {
                 this.canvas.requestRenderAll();
                 resolve();
             }, '');
+        });
+    }
+
+    /**
+     * @param {string} layerId
+     * @returns {Promise<string>}
+     */
+    captureLayerDataURL(layerId) {
+        return new Promise((resolve) => {
+            const sourceObjects = this.canvas.getObjects().filter(
+                obj => obj.layerId === layerId && !obj.isBg
+            );
+
+            if (sourceObjects.length === 0) {
+                const blank = document.createElement('canvas');
+                blank.width = this.canvas.width;
+                blank.height = this.canvas.height;
+                resolve(blank.toDataURL());
+                return;
+            }
+
+            const ordered = sourceObjects.slice().sort(
+                (a, b) => this.canvas.getObjects().indexOf(a) - this.canvas.getObjects().indexOf(b)
+            );
+
+            const clonePromises = ordered.map(
+                obj => new Promise(res => obj.clone(res, CUSTOM_FABRIC_PROPS))
+            );
+
+            Promise.all(clonePromises).then((clones) => {
+                const offscreen = new fabric.StaticCanvas(null, {
+                    width: this.canvas.width,
+                    height: this.canvas.height
+                });
+
+                clones.forEach(clone => {
+                    clone.set({ left: clone.left, top: clone.top });
+                    offscreen.add(clone);
+                });
+
+                offscreen.renderAll();
+                const dataURL = offscreen.toDataURL({ format: 'png', multiplier: 1 });
+                offscreen.dispose();
+                resolve(dataURL);
+            });
         });
     }
 }

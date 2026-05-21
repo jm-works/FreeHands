@@ -5,7 +5,7 @@ export class FilterManager {
         this.cm = canvasManager;
     }
 
-    open() {
+    async open() {
         const layerManager = this.cm.layerManager;
         const canvas = this.cm.canvas;
         const activeLayerId = layerManager.activeLayerId;
@@ -20,6 +20,9 @@ export class FilterManager {
             alertModal.show('Active layer is empty.');
             return;
         }
+
+        const prevURL = await this.cm.historyManager.captureLayerDataURL(activeLayerId);
+        const prevObjects = this.cm.historyManager.snapshotLayerObjects(activeLayerId);
 
         const filters = {
             brightness: 0,
@@ -36,11 +39,9 @@ export class FilterManager {
         overlay.style.zIndex = '100001';
         overlay.style.display = 'flex';
 
-        // Remove o fundo escuro e o blur para revelar o canvas em tempo real
         overlay.style.background = 'rgba(0, 0, 0, 0.1)';
         overlay.style.backdropFilter = 'none';
 
-        // Move o modal para o canto superior direito para não cobrir o desenho
         overlay.style.justifyContent = 'flex-end';
         overlay.style.alignItems = 'flex-start';
         overlay.style.padding = '60px 20px 0 0';
@@ -156,12 +157,13 @@ export class FilterManager {
         const confirmBtn = document.createElement('button');
         confirmBtn.className = 'custom-modal-btn confirm';
         confirmBtn.textContent = 'Apply';
-        confirmBtn.onclick = () => {
+        confirmBtn.onclick = async () => {
             if (!previewImg) {
                 document.body.removeChild(overlay);
                 window.removeEventListener('keydown', onKey, { capture: true });
                 return;
             }
+
             layerObjects.forEach(obj => canvas.remove(obj));
             previewImg.set({
                 layerId: activeLayerId,
@@ -171,7 +173,10 @@ export class FilterManager {
                 hasBorders: false
             });
             canvas.requestRenderAll();
-            this.cm.historyManager.saveState();
+
+            const nextURL = await this.cm.historyManager.captureLayerDataURL(activeLayerId);
+            this.cm.historyManager.rasterCommand(prevURL, nextURL, activeLayerId, prevObjects);
+
             document.body.removeChild(overlay);
             window.removeEventListener('keydown', onKey, { capture: true });
         };

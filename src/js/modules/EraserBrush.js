@@ -178,6 +178,14 @@ export const EraserBrush = fabric.util.createClass(fabric.BaseBrush, {
 
         if (intersectingObjects.length === 0) return;
 
+        const historyManager = canvas.historyManager;
+        const prevURL = historyManager
+            ? await historyManager.captureLayerDataURL(activeLayerId)
+            : null;
+        const prevObjects = historyManager
+            ? historyManager.snapshotLayerObjects(activeLayerId)
+            : [];
+
         for (const obj of intersectingObjects) {
             const objBbox = obj.getBoundingRect();
             const pad = 10;
@@ -244,8 +252,10 @@ export const EraserBrush = fabric.util.createClass(fabric.BaseBrush, {
         }
 
         canvas.requestRenderAll();
-        if (canvas.historyManager) {
-            canvas.historyManager.saveState();
+
+        if (historyManager && prevURL !== null) {
+            const nextURL = await historyManager.captureLayerDataURL(activeLayerId);
+            historyManager.rasterCommand(prevURL, nextURL, activeLayerId, prevObjects);
         }
     }
 });
