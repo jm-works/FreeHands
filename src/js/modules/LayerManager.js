@@ -268,6 +268,12 @@ export class LayerManager {
             setTimeout(() => { this._suppressPropertyCommit = false; }, 0);
         }
 
+        if (this.canvasManager.currentTool === 'select') {
+            this.canvasManager.tools._enableSelectableObjects();
+            this.canvas.discardActiveObject();
+            this.canvas.requestRenderAll();
+        }
+
         this.renderUI();
     }
 
@@ -317,6 +323,13 @@ export class LayerManager {
         if (prop === 'visible') {
             this.canvas.requestRenderAll();
         }
+
+        if (this.canvasManager.currentTool === 'select') {
+            this.canvasManager.tools._enableSelectableObjects();
+            this.canvas.discardActiveObject();
+            this.canvas.requestRenderAll();
+        }
+
         this.renderUI();
 
         this.canvasManager.historyManager.layerCommand('property', {
