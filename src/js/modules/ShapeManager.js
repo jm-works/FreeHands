@@ -1,10 +1,11 @@
+const MIN_SHAPE_SIZE = 3;
+
 export class ShapeManager {
     constructor(canvasManager, config) {
         this.cm = canvasManager;
         this.canvas = canvasManager.canvas;
 
         this.shapeType = config.shapeType;
-        this.finalSizeCheck = config.finalSizeCheck;
 
         this.isDrawing = false;
         this.shape = null;
@@ -14,11 +15,12 @@ export class ShapeManager {
     }
 
     _buildShapeConfig(x, y) {
+        const color = this.cm.getBrushColorAsRGBA();
         return {
             left: x,
             top: y,
-            fill: 'transparent',
-            stroke: this.cm.getBrushColorAsRGBA(),
+            fill: color,
+            stroke: color,
             strokeWidth: this.cm.brushSize,
             strokeUniform: true,
             selectable: false,
@@ -47,6 +49,42 @@ export class ShapeManager {
         this.shape.set(update);
     }
 
+    _renderDimensionPreview(w, h, left, top) {
+        const ctx = this.canvas.contextTop;
+        if (!ctx) return;
+
+        this.canvas.clearContext(ctx);
+
+        const label = `${Math.round(w)} × ${Math.round(h)}`;
+        const padding = 4;
+        const fontSize = 11;
+
+        ctx.save();
+        ctx.font = `600 ${fontSize}px Oswald, Arial Narrow, sans-serif`;
+
+        const textWidth = ctx.measureText(label).width;
+        const boxW = textWidth + padding * 2;
+        const boxH = fontSize + padding * 2;
+
+        let lx = left + w + 6;
+        let ly = top + h + 6;
+        if (lx + boxW > this.canvas.width) lx = left - boxW - 6;
+        if (ly + boxH > this.canvas.height) ly = top - boxH - 6;
+
+        ctx.fillStyle = 'rgba(5, 5, 5, 0.75)';
+        ctx.fillRect(lx, ly, boxW, boxH);
+
+        ctx.strokeStyle = 'rgba(192, 57, 43, 0.8)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(lx, ly, boxW, boxH);
+
+        ctx.fillStyle = '#e0e0e0';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(label, lx + padding, ly + boxH / 2);
+
+        ctx.restore();
+    }
+
     onMouseDown(x, y) {
         this.isDrawing = true;
         this.startX = x;
@@ -71,17 +109,24 @@ export class ShapeManager {
         const top = y > this.startY ? this.startY : this.startY - h;
 
         this._updateShape(w, h, left, top);
+        this._renderDimensionPreview(w, h, left, top);
         this.canvas.requestRenderAll();
     }
 
     onMouseUp() {
         this.isDrawing = false;
+
+        this.canvas.clearContext(this.canvas.contextTop);
+
         if (!this.shape) return;
 
-        if (this.finalSizeCheck(this.shape)) {
+        const tooSmall = this.shapeType === 'rect'
+            ? this.shape.width < MIN_SHAPE_SIZE && this.shape.height < MIN_SHAPE_SIZE
+            : this.shape.rx < MIN_SHAPE_SIZE / 2 && this.shape.ry < MIN_SHAPE_SIZE / 2;
+
+        if (tooSmall) {
             this.canvas.remove(this.shape);
         } else {
-            this.cm.historyManager._assignUID(this.shape);
             this.cm.historyManager.addCommand(this.shape);
         }
 

@@ -1,3 +1,5 @@
+const MIN_LINE_LENGTH = 3;
+
 export class LineManager {
     constructor(canvasManager) {
         this.cm = canvasManager;
@@ -51,13 +53,17 @@ export class LineManager {
         this.isDrawing = false;
         if (!this.shape) return;
 
-        if (this.shape.x1 === this.shape.x2 && this.shape.y1 === this.shape.y2) {
+        const dx = this.shape.x2 - this.shape.x1;
+        const dy = this.shape.y2 - this.shape.y1;
+        const length = Math.sqrt(dx * dx + dy * dy);
+
+        if (length < MIN_LINE_LENGTH) {
             this.canvas.remove(this.shape);
         } else {
             this.shape.setCoords();
-            this.cm.historyManager._assignUID(this.shape);
             this.cm.historyManager.addCommand(this.shape);
         }
+
         this.shape = null;
     }
 }
