@@ -145,6 +145,7 @@ export class CanvasTools {
         if (this.cm.canvas.freeDrawingBrush) {
             this.cm.canvas.freeDrawingBrush.width = size;
         }
+        this.cm.cursorManager.updateSize(size, this.cm.zoom);
     }
 
     setFillTolerance(val) {

@@ -8,6 +8,27 @@ export const PressureBrush = fabric.util.createClass(fabric.BaseBrush, {
         this.points = [];
         this.pressureSensitivity = 1.0;
         this._lastPoint = null;
+        this._anchorPoint = null;
+        this._isAltConstrained = false;
+
+        this._onPointerMove = (e) => {
+            if (!this.canvas.isDrawingMode || this.points.length === 0) return;
+
+            const rect = this.canvas.upperCanvasEl.getBoundingClientRect();
+            const zoom = this.canvas.getZoom();
+            const coalesced = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+
+            for (const ce of coalesced) {
+                const pointer = {
+                    x: (ce.clientX - rect.left) / zoom,
+                    y: (ce.clientY - rect.top) / zoom
+                };
+                this.addPoint(pointer, ce, false);
+            }
+
+            this.canvas.clearContext(this.canvas.contextTop);
+            this.renderLatest(this.canvas.contextTop);
+        };
     },
 
     onMouseDown: function (pointer, options) {
@@ -16,6 +37,7 @@ export const PressureBrush = fabric.util.createClass(fabric.BaseBrush, {
         this.canvas.clearContext(this.canvas.contextTop);
         this._lastPoint = null;
         this.addPoint(pointer, options.e, true);
+        this.canvas.upperCanvasEl.addEventListener('pointermove', this._onPointerMove);
     },
 
     onMouseMove: function (pointer, options) {
@@ -26,11 +48,13 @@ export const PressureBrush = fabric.util.createClass(fabric.BaseBrush, {
     },
 
     onMouseUp: function () {
+        this.canvas.upperCanvasEl.removeEventListener('pointermove', this._onPointerMove);
         if (!this.canvas.isDrawingMode || this.points.length === 0) return;
         this.canvas.clearContext(this.canvas.contextTop);
         this.createPath();
         this.points = [];
         this._lastPoint = null;
+        this._anchorPoint = null;
     },
 
     addPoint: function (pointer, e, isDown) {
@@ -51,6 +75,8 @@ export const PressureBrush = fabric.util.createClass(fabric.BaseBrush, {
             return;
         }
 
+        if (!this._lastPoint) return;
+
         let currentX = pointer.x;
         let currentY = pointer.y;
 
@@ -68,12 +94,9 @@ export const PressureBrush = fabric.util.createClass(fabric.BaseBrush, {
         const dy = currentY - this._lastPoint.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
 
-        const dynamicMinDist = Math.max(0.2, this.width * 0.03);
-
         if (dist < 0.01) return;
 
         const pPressure = (this._lastPoint.pressure * 0.6) + (rawPressure * 0.4);
-
         const pt = { x: currentX, y: currentY, pressure: pPressure };
         this.points.push(pt);
         this._lastPoint = pt;
