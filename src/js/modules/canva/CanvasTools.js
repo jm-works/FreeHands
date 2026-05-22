@@ -8,11 +8,58 @@ const SELECTION_DISABLED_TOOLS = new Set(['cutarea', 'rectangle', 'ellipse', 'li
 export class CanvasTools {
     constructor(cm) {
         this.cm = cm;
+        this._initSelectionFilter();
+    }
+
+    _initSelectionFilter() {
+        this.cm.canvas.on('selection:created', (e) => {
+            if (this.cm.currentTool !== 'select') return;
+            if (!this.cm.layerManager) return;
+
+            const activeLayerId = this.cm.layerManager.activeLayerId;
+            const selected = this.cm.canvas.getActiveObjects();
+            const valid = selected.filter(obj => obj.layerId === activeLayerId);
+
+            if (valid.length === selected.length) return;
+
+            this.cm.canvas.discardActiveObject();
+
+            if (valid.length === 0) return;
+
+            if (valid.length === 1) {
+                this.cm.canvas.setActiveObject(valid[0]);
+            } else {
+                const sel = new fabric.ActiveSelection(valid, { canvas: this.cm.canvas });
+                this.cm.canvas.setActiveObject(sel);
+            }
+
+            this.cm.canvas.requestRenderAll();
+        });
     }
 
     _disableAllObjects() {
         this.cm.canvas.getObjects().forEach(obj => {
             obj.set({ selectable: false, evented: false });
+        });
+    }
+
+    _enableSelectableObjects() {
+        this.cm.canvas.getObjects().forEach(obj => {
+            let canSelect = true;
+            if (obj.isBg || obj.isEraser || obj.isSelectionRect) canSelect = false;
+            if (this.cm.layerManager && canSelect) {
+                const layer = this.cm.layerManager.layers.find(l => l.id === obj.layerId);
+                if (!layer || layer.locked || !layer.visible) canSelect = false;
+            }
+            obj.set({
+                selectable: canSelect,
+                evented: canSelect,
+                borderColor: '#c0392b',
+                cornerColor: '#c0392b',
+                cornerSize: 8,
+                transparentCorners: false,
+                padding: obj.type === 'line' ? 10 : 0
+            });
         });
     }
 
@@ -67,76 +114,42 @@ export class CanvasTools {
             this.cm.canvas.selection = true;
             this.cm.canvas.defaultCursor = 'default';
             this.cm.cursorManager.hide();
-
-            this.cm.canvas.getObjects().forEach(obj => {
-                let canSelect = true;
-                if (obj.isBg || obj.isEraser || obj.isSelectionRect) {
-                    canSelect = false;
-                }
-                if (this.cm.layerManager && canSelect) {
-                    const layer = this.cm.layerManager.layers.find(l => l.id === obj.layerId);
-                    if (!layer || layer.locked || !layer.visible) canSelect = false;
-                }
-                obj.set({
-                    selectable: canSelect,
-                    evented: canSelect,
-                    borderColor: '#c0392b',
-                    cornerColor: '#c0392b',
-                    cornerSize: 8,
-                    transparentCorners: false,
-                    padding: obj.type === 'line' ? 15 : 0
-                });
-                obj.setCoords();
-            });
-            this.cm.canvas.requestRenderAll();
+            this._enableSelectableObjects();
         }
+
+        this.cm.canvas.requestRenderAll();
+    }
+
+    getBrushColorAsRGBA() {
+        const hex = this.cm.brushColor || '#000000';
+        const opacity = this.cm.brushOpacity !== undefined ? this.cm.brushOpacity : 1;
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        return `rgba(${r},${g},${b},${opacity})`;
     }
 
     setBrushColor(color) {
         this.cm.brushColor = color;
-        if (DRAWING_TOOLS.has(this.cm.currentTool) && this.cm.canvas.freeDrawingBrush) {
+        if (this.cm.canvas.freeDrawingBrush) {
             this.cm.canvas.freeDrawingBrush.color = this.getBrushColorAsRGBA();
         }
     }
 
     setBrushSize(size) {
-        this.cm.brushSize = parseInt(size, 10);
+        this.cm.brushSize = size;
         if (this.cm.canvas.freeDrawingBrush) {
-            this.cm.canvas.freeDrawingBrush.width = this.cm.brushSize;
+            this.cm.canvas.freeDrawingBrush.width = size;
         }
-        this.cm.cursorManager.updateSize(this.cm.brushSize, this.cm.zoom);
     }
 
     setFillTolerance(val) {
-        this.cm.fillTolerance = parseInt(val, 10);
-    }
-
-    getBrushColorAsRGBA() {
-        let hex = this.cm.brushColor.trim();
-        if (hex.startsWith('#')) {
-            hex = hex.replace('#', '');
-            if (hex.length === 3) {
-                hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
-            }
-            if (hex.length === 6) {
-                const r = parseInt(hex.substring(0, 2), 16);
-                const g = parseInt(hex.substring(2, 4), 16);
-                const b = parseInt(hex.substring(4, 6), 16);
-                return `rgba(${r}, ${g}, ${b}, ${this.cm.brushOpacity})`;
-            }
-        }
-        const tmp = document.createElement('canvas');
-        tmp.width = 1; tmp.height = 1;
-        const ctx = tmp.getContext('2d');
-        ctx.fillStyle = this.cm.brushColor;
-        ctx.fillRect(0, 0, 1, 1);
-        const d = ctx.getImageData(0, 0, 1, 1).data;
-        return `rgba(${d[0]}, ${d[1]}, ${d[2]}, ${this.cm.brushOpacity})`;
+        this.cm.fillTolerance = parseInt(val);
     }
 
     setBrushOpacity(opacity) {
         this.cm.brushOpacity = opacity / 100;
-        if ((this.cm.currentTool === 'brush' || this.cm.currentTool === 'pen') && this.cm.canvas.freeDrawingBrush) {
+        if (this.cm.canvas.freeDrawingBrush) {
             this.cm.canvas.freeDrawingBrush.color = this.getBrushColorAsRGBA();
         }
     }

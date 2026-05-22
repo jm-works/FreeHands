@@ -6,10 +6,128 @@ function captureTransformProps(obj) {
     return snap;
 }
 
+function applySelectStyle(obj) {
+    obj.set({
+        selectable: true,
+        evented: true,
+        borderColor: '#c0392b',
+        cornerColor: '#c0392b',
+        cornerSize: 8,
+        transparentCorners: false,
+        padding: obj.type === 'line' ? 10 : 0
+    });
+}
+
 export class CanvasEvents {
     constructor(cm) {
         this.cm = cm;
     }
+
+    _selectPaste() {
+        if (!this.cm._clipboard) return;
+
+        const activeLayerId = this.cm.layerManager ? this.cm.layerManager.activeLayerId : null;
+
+        this.cm._clipboard.clone((clonedObj) => {
+            this.cm.canvas.discardActiveObject();
+
+            this.cm._pasteOffset = (this.cm._pasteOffset || 0) + 10;
+            const offset = this.cm._pasteOffset;
+
+            if (clonedObj.type === 'activeSelection') {
+                clonedObj.canvas = this.cm.canvas;
+                const children = [];
+                clonedObj.forEachObject((obj) => {
+                    obj.set('layerId', activeLayerId);
+                    obj.set({
+                        left: obj.left + offset,
+                        top: obj.top + offset,
+                    });
+                    applySelectStyle(obj);
+                    obj.set({ padding: obj.type === 'line' ? 10 : 0 });
+                    this.cm.historyManager._assignUID(obj);
+                    this.cm.canvas.add(obj);
+                    children.push(obj);
+                });
+                clonedObj.setCoords();
+                this.cm.historyManager.addCommand(children);
+            } else {
+                clonedObj.set({
+                    left: clonedObj.left + offset,
+                    top: clonedObj.top + offset,
+                    layerId: activeLayerId,
+                });
+                applySelectStyle(clonedObj);
+                this.cm.historyManager._assignUID(clonedObj);
+                this.cm.canvas.add(clonedObj);
+                this.cm.historyManager.addCommand([clonedObj]);
+            }
+
+            this.cm.canvas.setActiveObject(clonedObj);
+            if (this.cm.layerManager) this.cm.layerManager.updateZIndices();
+            this.cm.canvas.requestRenderAll();
+        });
+    }
+
+    _selectDuplicate() {
+        const activeObject = this.cm.canvas.getActiveObject();
+        if (!activeObject) return;
+
+        const activeLayerId = this.cm.layerManager ? this.cm.layerManager.activeLayerId : null;
+
+        activeObject.clone((clonedObj) => {
+            this.cm.canvas.discardActiveObject();
+
+            if (clonedObj.type === 'activeSelection') {
+                clonedObj.canvas = this.cm.canvas;
+                const children = [];
+                clonedObj.forEachObject((obj) => {
+                    obj.set({ left: obj.left + 10, top: obj.top + 10, layerId: activeLayerId });
+                    applySelectStyle(obj);
+                    this.cm.historyManager._assignUID(obj);
+                    this.cm.canvas.add(obj);
+                    children.push(obj);
+                });
+                clonedObj.setCoords();
+                this.cm.historyManager.addCommand(children);
+                const sel = new fabric.ActiveSelection(children, { canvas: this.cm.canvas });
+                this.cm.canvas.setActiveObject(sel);
+            } else {
+                clonedObj.set({ left: clonedObj.left + 10, top: clonedObj.top + 10, layerId: activeLayerId });
+                applySelectStyle(clonedObj);
+                this.cm.historyManager._assignUID(clonedObj);
+                this.cm.canvas.add(clonedObj);
+                this.cm.historyManager.addCommand([clonedObj]);
+                this.cm.canvas.setActiveObject(clonedObj);
+            }
+
+            if (this.cm.layerManager) this.cm.layerManager.updateZIndices();
+            this.cm.canvas.requestRenderAll();
+        });
+    }
+
+    _selectNudge(dx, dy) {
+        const activeObject = this.cm.canvas.getActiveObject();
+        if (!activeObject) return;
+
+        const targets = activeObject.type === 'activeSelection'
+            ? activeObject.getObjects()
+            : [activeObject];
+
+        const prevProps = targets.map(obj => captureTransformProps(obj));
+
+        targets.forEach(obj => {
+            obj.set({ left: obj.left + dx, top: obj.top + dy });
+            obj.setCoords();
+        });
+
+        if (activeObject.type === 'activeSelection') activeObject.setCoords();
+
+        const nextProps = targets.map(obj => captureTransformProps(obj));
+        this.cm.historyManager.modifyCommand(targets, prevProps, nextProps);
+        this.cm.canvas.requestRenderAll();
+    }
+
 
     addEventListeners() {
         window.addEventListener('keydown', (e) => {
@@ -23,17 +141,14 @@ export class CanvasEvents {
                 const rect = this.cm.workspace.getBoundingClientRect();
 
                 const px = (this.cm.virtualX !== undefined && this.cm.virtualX >= rect.left && this.cm.virtualX <= rect.right)
-                    ? (this.cm.virtualX - rect.left)
-                    : (rect.width / 2);
+                    ? (this.cm.virtualX - rect.left) : (rect.width / 2);
                 const py = (this.cm.virtualY !== undefined && this.cm.virtualY >= rect.top && this.cm.virtualY <= rect.bottom)
-                    ? (this.cm.virtualY - rect.top)
-                    : (rect.height / 2);
+                    ? (this.cm.virtualY - rect.top) : (rect.height / 2);
 
                 const dx = (px - this.cm.offsetX - rect.width / 2) / this.cm.zoom;
                 const dy = (py - this.cm.offsetY - rect.height / 2) / this.cm.zoom;
 
                 const newZoom = Math.min(Math.max(this.cm.zoom * zoomFactor, 0.1), 20);
-
                 this.cm.offsetX += dx * (this.cm.zoom - newZoom);
                 this.cm.offsetY += dy * (this.cm.zoom - newZoom);
                 this.cm.zoom = newZoom;
@@ -47,31 +162,33 @@ export class CanvasEvents {
             }
 
             if (isArrow && !isInput) {
+                if (this.cm.currentTool === 'select') {
+                    const activeObject = this.cm.canvas.getActiveObject();
+                    if (activeObject) {
+                        e.preventDefault();
+                        const step = e.shiftKey ? 10 : 1;
+                        const dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0;
+                        const dy = e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0;
+                        this._selectNudge(dx, dy);
+                    }
+                    return;
+                }
+
                 const isDrawingTool = this.cm.currentTool === 'brush' || this.cm.currentTool === 'pen' || this.cm.currentTool === 'eraser';
                 if (!isDrawingTool || !this.cm.canvas.freeDrawingBrush) return;
 
                 e.preventDefault();
-
                 const wasEmpty = this.cm.activeArrowKeys.size === 0;
-
                 this.cm.activeArrowKeys.add(e.key);
 
                 if (wasEmpty) {
                     this.cm.canvas.isDrawingMode = true;
-
                     const rect = this.cm.board.getBoundingClientRect();
-
                     const pointer = {
                         x: (this.cm.virtualX - rect.left) / this.cm.zoom,
                         y: (this.cm.virtualY - rect.top) / this.cm.zoom
                     };
-
-                    this.cm.canvas.freeDrawingBrush.onMouseDown(pointer, {
-                        e: {
-                            pointerType: 'mouse',
-                            pressure: 0.5
-                        }
-                    });
+                    this.cm.canvas.freeDrawingBrush.onMouseDown(pointer, { e: { pointerType: 'mouse', pressure: 0.5 } });
 
                     this.cm.keyboardDrawInterval = setInterval(() => {
                         const step = this.cm.isAltPressed ? 10 : 3;
@@ -82,25 +199,17 @@ export class CanvasEvents {
                         if (this.cm.activeArrowKeys.has('ArrowRight')) this.cm.virtualX += step;
 
                         const rect = this.cm.board.getBoundingClientRect();
-
                         const pointer = {
                             x: (this.cm.virtualX - rect.left) / this.cm.zoom,
                             y: (this.cm.virtualY - rect.top) / this.cm.zoom
                         };
-
                         this.cm.canvas.freeDrawingBrush.onMouseMove(pointer, {
-                            e: {
-                                pointerType: 'mouse',
-                                pressure: 0.5,
-                                altKey: this.cm.isAltPressed
-                            }
+                            e: { pointerType: 'mouse', pressure: 0.5, altKey: this.cm.isAltPressed }
                         });
-
                         this.cm.cursorManager.updatePosition(this.cm.virtualX, this.cm.virtualY);
                         this.cm.canvas.requestRenderAll();
                     }, 16);
                 }
-
                 return;
             }
 
@@ -120,6 +229,29 @@ export class CanvasEvents {
                     this.cm.cutAreaManager.deleteSelection();
                 }
 
+            } else if (e.key === 'Escape' && !isInput) {
+                if (this.cm.currentTool === 'select') {
+                    this.cm.canvas.discardActiveObject();
+                    this.cm.canvas.requestRenderAll();
+                }
+
+            } else if (isCtrl && e.key.toLowerCase() === 'a' && !isInput) {
+                if (this.cm.currentTool === 'select') {
+                    e.preventDefault();
+                    const activeLayerId = this.cm.layerManager ? this.cm.layerManager.activeLayerId : null;
+                    const selectables = this.cm.canvas.getObjects().filter(obj =>
+                        obj.selectable && obj.layerId === activeLayerId
+                    );
+                    if (selectables.length === 0) return;
+                    if (selectables.length === 1) {
+                        this.cm.canvas.setActiveObject(selectables[0]);
+                    } else {
+                        const sel = new fabric.ActiveSelection(selectables, { canvas: this.cm.canvas });
+                        this.cm.canvas.setActiveObject(sel);
+                    }
+                    this.cm.canvas.requestRenderAll();
+                }
+
             } else if (isCtrl && e.key.toLowerCase() === 'c' && !isInput) {
                 if (this.cm.currentTool === 'cutarea') {
                     e.preventDefault();
@@ -128,6 +260,7 @@ export class CanvasEvents {
                     const activeObject = this.cm.canvas.getActiveObject();
                     if (activeObject) {
                         e.preventDefault();
+                        this.cm._pasteOffset = 0;
                         activeObject.clone((cloned) => {
                             this.cm._clipboard = cloned;
                         });
@@ -142,14 +275,17 @@ export class CanvasEvents {
                     const activeObject = this.cm.canvas.getActiveObject();
                     if (activeObject) {
                         e.preventDefault();
+                        const activeObjects = this.cm.canvas.getActiveObjects();
+
+                        this.cm.historyManager.removeCommand(activeObjects);
+                        activeObjects.forEach(obj => this.cm.canvas.remove(obj));
+                        this.cm.canvas.discardActiveObject();
+                        this.cm.canvas.requestRenderAll();
+                        this.cm.canvas.selection = true;
+
+                        this.cm._pasteOffset = 0;
                         activeObject.clone((cloned) => {
                             this.cm._clipboard = cloned;
-                            const activeObjects = this.cm.canvas.getActiveObjects();
-                            this.cm.historyManager.removeCommand(activeObjects);
-                            activeObjects.forEach(obj => this.cm.canvas.remove(obj));
-                            this.cm.canvas.discardActiveObject();
-                            this.cm.canvas.requestRenderAll();
-                            this.cm.canvas.selection = true;
                         });
                     }
                 }
@@ -163,66 +299,14 @@ export class CanvasEvents {
                 } else if (this.cm.currentTool === 'select') {
                     if (this.cm._clipboard) {
                         e.preventDefault();
-                        this.cm._clipboard.clone((clonedObj) => {
-                            this.cm.canvas.discardActiveObject();
-                            clonedObj.set({
-                                left: clonedObj.left + 10,
-                                top: clonedObj.top + 10,
-                                evented: true,
-                                selectable: true
-                            });
-
-                            if (this.cm.layerManager) {
-                                if (!this.cm._copyCount) this.cm._copyCount = 0;
-                                this.cm._copyCount += 1;
-                                this.cm.layerManager.addLayer(`Copy Layer ${this.cm._copyCount}`);
-                            }
-
-                            const activeLayerId = this.cm.layerManager ? this.cm.layerManager.activeLayerId : null;
-
-                            if (clonedObj.type === 'activeSelection') {
-                                clonedObj.canvas = this.cm.canvas;
-                                const children = [];
-                                clonedObj.forEachObject((obj) => {
-                                    obj.set('layerId', activeLayerId);
-                                    obj.set({
-                                        selectable: true,
-                                        evented: true,
-                                        borderColor: '#c0392b',
-                                        cornerColor: '#c0392b',
-                                        cornerSize: 8,
-                                        transparentCorners: false,
-                                        padding: obj.type === 'line' ? 10 : 0
-                                    });
-                                    this.cm.historyManager._assignUID(obj);
-                                    this.cm.canvas.add(obj);
-                                    children.push(obj);
-                                });
-                                clonedObj.setCoords();
-                                this.cm.historyManager.addCommand(children);
-                            } else {
-                                clonedObj.set('layerId', activeLayerId);
-                                clonedObj.set({
-                                    selectable: true,
-                                    evented: true,
-                                    borderColor: '#c0392b',
-                                    cornerColor: '#c0392b',
-                                    cornerSize: 8,
-                                    transparentCorners: false,
-                                    padding: clonedObj.type === 'line' ? 10 : 0
-                                });
-                                this.cm.historyManager._assignUID(clonedObj);
-                                this.cm.canvas.add(clonedObj);
-                                this.cm.historyManager.addCommand([clonedObj]);
-                            }
-
-                            this.cm._clipboard.top += 10;
-                            this.cm._clipboard.left += 10;
-                            this.cm.canvas.setActiveObject(clonedObj);
-                            if (this.cm.layerManager) this.cm.layerManager.updateZIndices();
-                            this.cm.canvas.requestRenderAll();
-                        });
+                        this._selectPaste();
                     }
+                }
+
+            } else if (isCtrl && e.key.toLowerCase() === 'd' && !isInput) {
+                if (this.cm.currentTool === 'select') {
+                    e.preventDefault();
+                    this._selectDuplicate();
                 }
 
             } else if (isCtrl && e.key.toLowerCase() === 'z') {
@@ -232,6 +316,7 @@ export class CanvasEvents {
             } else if (isCtrl && e.key.toLowerCase() === 'y') {
                 e.preventDefault();
                 this.cm.historyManager.redo();
+
             } else if (e.key === 'Shift' && !this.cm.isShiftPressed && !isInput) {
                 this.cm.isShiftPressed = true;
                 if (this.cm.currentTool !== 'select') {
@@ -263,30 +348,27 @@ export class CanvasEvents {
                     this.cm.keyboardDrawInterval = null;
 
                     if (this.cm.canvas.freeDrawingBrush) {
-                        this.cm.canvas.freeDrawingBrush.onMouseUp({
-                            e: { pointerType: 'mouse' }
-                        });
+                        this.cm.canvas.freeDrawingBrush.onMouseUp({ e: { pointerType: 'mouse' } });
                     }
                 }
-
                 return;
             }
 
             if (e.key === 'Shift' && !isInput) {
                 this.cm.isShiftPressed = false;
-                if (!this.cm.isResizingBrush && !this.cm.isSpacePressed && (this.cm.currentTool === 'brush' || this.cm.currentTool === 'pen' || this.cm.currentTool === 'eraser')) {
+                if (!this.cm.isResizingBrush && !this.cm.isSpacePressed &&
+                    (this.cm.currentTool === 'brush' || this.cm.currentTool === 'pen' || this.cm.currentTool === 'eraser')) {
                     this.cm.canvas.isDrawingMode = true;
                 }
             }
 
-            if (e.key === 'Alt') {
-                this.cm.isAltPressed = false;
-            }
+            if (e.key === 'Alt') this.cm.isAltPressed = false;
 
             if (e.code === 'Space' && !isInput) {
                 e.preventDefault();
                 this.cm.isSpacePressed = false;
-                if (!this.cm.isShiftPressed && (this.cm.currentTool === 'brush' || this.cm.currentTool === 'pen' || this.cm.currentTool === 'eraser')) {
+                if (!this.cm.isShiftPressed &&
+                    (this.cm.currentTool === 'brush' || this.cm.currentTool === 'pen' || this.cm.currentTool === 'eraser')) {
                     this.cm.canvas.isDrawingMode = true;
                 }
                 this.cm.cursorManager.updateSystemCursor(this.cm.isSpacePressed, this.cm.isPanning);
@@ -295,8 +377,9 @@ export class CanvasEvents {
         });
 
         const interceptDrawing = (e) => {
-            const activeLayer = this.cm.layerManager ?
-                this.cm.layerManager.layers.find(l => l.id === this.cm.layerManager.activeLayerId) : null;
+            const activeLayer = this.cm.layerManager
+                ? this.cm.layerManager.layers.find(l => l.id === this.cm.layerManager.activeLayerId)
+                : null;
             const layerPrevent = activeLayer && (activeLayer.locked || !activeLayer.visible);
 
             if ((e.shiftKey || this.cm.isShiftPressed || this.cm.isResizingBrush) && this.cm.currentTool !== 'select') {
@@ -315,14 +398,17 @@ export class CanvasEvents {
         this.cm.workspace.addEventListener('touchstart', interceptDrawing, { capture: true, passive: false });
 
         this.cm.workspace.addEventListener('pointerdown', (e) => {
-            if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) {
+            if (document.activeElement &&
+                (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) {
                 document.activeElement.blur();
             }
 
             window.currentPointerPressure = e.pressure !== undefined ? e.pressure : 0.5;
             if (window.currentPointerPressure === 0 && e.pointerType === 'mouse') window.currentPointerPressure = 0.5;
 
-            const activeLayer = this.cm.layerManager ? this.cm.layerManager.layers.find(l => l.id === this.cm.layerManager.activeLayerId) : null;
+            const activeLayer = this.cm.layerManager
+                ? this.cm.layerManager.layers.find(l => l.id === this.cm.layerManager.activeLayerId)
+                : null;
             const layerPrevent = activeLayer && (activeLayer.locked || !activeLayer.visible);
 
             if (e.shiftKey || this.cm.isShiftPressed) {
@@ -449,15 +535,10 @@ export class CanvasEvents {
             if (this.cm.isResizingBrush) {
                 const deltaX = e.clientX - this.cm.resizeStartPosX;
                 let newSize = this.cm.initialBrushSize + Math.round(deltaX * 0.5);
-
                 if (newSize < 1) newSize = 1;
                 if (newSize > 100) newSize = 100;
-
                 this.cm.setBrushSize(newSize);
-
-                if (this.cm.onBrushSizeChange) {
-                    this.cm.onBrushSizeChange(newSize);
-                }
+                if (this.cm.onBrushSizeChange) this.cm.onBrushSizeChange(newSize);
             } else if (this.cm.isPanning) {
                 this.cm.offsetX += (e.clientX - this.cm.lastPosX);
                 this.cm.offsetY += (e.clientY - this.cm.lastPosY);
@@ -465,7 +546,10 @@ export class CanvasEvents {
                 this.cm.lastPosY = e.clientY;
                 this.cm.updateTransform();
             } else if (!this.cm.isSpacePressed && !e.shiftKey && !this.cm.isShiftPressed) {
-                if (this.cm.currentTool === 'fill' || this.cm.currentTool === 'pan' || this.cm.currentTool === 'select' || this.cm.currentTool === 'cutarea' || this.cm.currentTool === 'rectangle' || this.cm.currentTool === 'ellipse' || this.cm.currentTool === 'line') {
+                if (this.cm.currentTool === 'fill' || this.cm.currentTool === 'pan' ||
+                    this.cm.currentTool === 'select' || this.cm.currentTool === 'cutarea' ||
+                    this.cm.currentTool === 'rectangle' || this.cm.currentTool === 'ellipse' ||
+                    this.cm.currentTool === 'line') {
                     this.cm.cursorManager.hide();
                 } else {
                     this.cm.cursorManager.updatePosition(e.clientX, e.clientY);
@@ -477,25 +561,15 @@ export class CanvasEvents {
         });
 
         window.addEventListener('pointerup', (e) => {
-            if (this.cm.currentTool === 'cutarea') {
-                this.cm.cutAreaManager.onMouseUp();
-            }
-
-            if (this.cm.currentTool === 'rectangle') {
-                this.cm.rectangleManager.onMouseUp();
-            }
-
-            if (this.cm.currentTool === 'line') {
-                this.cm.lineManager.onMouseUp();
-            }
-
-            if (this.cm.currentTool === 'ellipse') {
-                this.cm.ellipseManager.onMouseUp();
-            }
+            if (this.cm.currentTool === 'cutarea') this.cm.cutAreaManager.onMouseUp();
+            if (this.cm.currentTool === 'rectangle') this.cm.rectangleManager.onMouseUp();
+            if (this.cm.currentTool === 'line') this.cm.lineManager.onMouseUp();
+            if (this.cm.currentTool === 'ellipse') this.cm.ellipseManager.onMouseUp();
 
             if (this.cm.isResizingBrush) {
                 this.cm.isResizingBrush = false;
-                if (!this.cm.isSpacePressed && (this.cm.currentTool === 'brush' || this.cm.currentTool === 'pen' || this.cm.currentTool === 'eraser')) {
+                if (!this.cm.isSpacePressed &&
+                    (this.cm.currentTool === 'brush' || this.cm.currentTool === 'pen' || this.cm.currentTool === 'eraser')) {
                     this.cm.canvas.isDrawingMode = true;
                 }
                 this.cm.cursorManager.updateSystemCursor(this.cm.isSpacePressed, false);
@@ -538,14 +612,12 @@ export class CanvasEvents {
                 : [e.target];
 
             const withPrev = targets.filter(obj => obj._prevTransformProps);
-
             if (withPrev.length === 0) return;
 
             const prevProps = withPrev.map(obj => obj._prevTransformProps);
             const nextProps = withPrev.map(obj => captureTransformProps(obj));
 
             this.cm.historyManager.modifyCommand(withPrev, prevProps, nextProps);
-
             targets.forEach(obj => { delete obj._prevTransformProps; });
         });
 
@@ -561,7 +633,11 @@ export class CanvasEvents {
         });
 
         this.cm.workspace.addEventListener('pointerenter', () => {
-            if (!this.cm.isSpacePressed && !this.cm.isResizingBrush && this.cm.currentTool !== 'fill' && this.cm.currentTool !== 'pan' && this.cm.currentTool !== 'select' && this.cm.currentTool !== 'cutarea' && this.cm.currentTool !== 'rectangle' && this.cm.currentTool !== 'ellipse' && this.cm.currentTool !== 'line') {
+            if (!this.cm.isSpacePressed && !this.cm.isResizingBrush &&
+                this.cm.currentTool !== 'fill' && this.cm.currentTool !== 'pan' &&
+                this.cm.currentTool !== 'select' && this.cm.currentTool !== 'cutarea' &&
+                this.cm.currentTool !== 'rectangle' && this.cm.currentTool !== 'ellipse' &&
+                this.cm.currentTool !== 'line') {
                 this.cm.cursorManager.show();
             }
             this.cm.canvas.calcOffset();
@@ -584,7 +660,6 @@ export class CanvasEvents {
             const dy = (py - this.cm.offsetY - rect.height / 2) / this.cm.zoom;
 
             const newZoom = Math.min(Math.max(this.cm.zoom * zoomFactor, 0.1), 20);
-
             this.cm.offsetX += dx * (this.cm.zoom - newZoom);
             this.cm.offsetY += dy * (this.cm.zoom - newZoom);
             this.cm.zoom = newZoom;
