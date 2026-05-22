@@ -212,28 +212,55 @@ export class SelectionPanel {
         targets.forEach(o => {
             const ow = o.getScaledWidth();
             const oh = o.getScaledHeight();
-            const originX = o.originX || 'left';
-            const originY = o.originY || 'top';
+
+            const abs = isMulti ? fabric.util.transformPoint(
+                { x: o.left, y: o.top },
+                obj.calcTransformMatrix()
+            ) : { x: o.left, y: o.top };
+
+            const toLocal = (absX, absY) => {
+                if (!isMulti) return { x: absX, y: absY };
+                const inv = fabric.util.invertTransform(obj.calcTransformMatrix());
+                return fabric.util.transformPoint({ x: absX, y: absY }, inv);
+            };
 
             switch (direction) {
-                case 'left':
-                    o.set('left', refBounds.left + (originX === 'center' ? ow / 2 : 0));
+                case 'left': {
+                    const targetAbsX = refBounds.left + (o.originX === 'center' ? ow / 2 : 0);
+                    const local = toLocal(targetAbsX, abs.y);
+                    o.set('left', local.x);
                     break;
-                case 'center':
-                    o.set('left', refBounds.left + refBounds.width / 2 + (originX === 'center' ? 0 : -ow / 2));
+                }
+                case 'center': {
+                    const targetAbsX = refBounds.left + refBounds.width / 2 + (o.originX === 'center' ? 0 : -ow / 2);
+                    const local = toLocal(targetAbsX, abs.y);
+                    o.set('left', local.x);
                     break;
-                case 'right':
-                    o.set('left', refBounds.left + refBounds.width - (originX === 'center' ? ow / 2 : ow));
+                }
+                case 'right': {
+                    const targetAbsX = refBounds.left + refBounds.width - (o.originX === 'center' ? ow / 2 : ow);
+                    const local = toLocal(targetAbsX, abs.y);
+                    o.set('left', local.x);
                     break;
-                case 'top':
-                    o.set('top', refBounds.top + (originY === 'center' ? oh / 2 : 0));
+                }
+                case 'top': {
+                    const targetAbsY = refBounds.top + (o.originY === 'center' ? oh / 2 : 0);
+                    const local = toLocal(abs.x, targetAbsY);
+                    o.set('top', local.y);
                     break;
-                case 'middle':
-                    o.set('top', refBounds.top + refBounds.height / 2 + (originY === 'center' ? 0 : -oh / 2));
+                }
+                case 'middle': {
+                    const targetAbsY = refBounds.top + refBounds.height / 2 + (o.originY === 'center' ? 0 : -oh / 2);
+                    const local = toLocal(abs.x, targetAbsY);
+                    o.set('top', local.y);
                     break;
-                case 'bottom':
-                    o.set('top', refBounds.top + refBounds.height - (originY === 'center' ? oh / 2 : oh));
+                }
+                case 'bottom': {
+                    const targetAbsY = refBounds.top + refBounds.height - (o.originY === 'center' ? oh / 2 : oh);
+                    const local = toLocal(abs.x, targetAbsY);
+                    o.set('top', local.y);
                     break;
+                }
             }
             o.setCoords();
         });
