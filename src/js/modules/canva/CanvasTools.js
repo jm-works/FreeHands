@@ -87,6 +87,10 @@ export class CanvasTools {
 
         this.cm.currentTool = tool;
 
+        if (this.cm.selectionPanel && tool !== 'select') {
+            this.cm.selectionPanel.hide();
+        }
+
         if (tool === 'brush') {
             this._setupDrawingTool(new PressureBrush(this.cm.canvas));
         } else if (tool === 'pen') {

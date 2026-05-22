@@ -7,6 +7,7 @@ import { RectangleManager } from '../RectangleManager.js';
 import { EllipseManager } from '../EllipseManager.js';
 import { AlignmentGuides } from '../AlignmentGuides.js';
 import { LineManager } from '../LineManager.js';
+import { SelectionPanel } from '../SelectionPanel.js';
 
 import { CanvasRenderer } from './CanvasRenderer.js';
 import { CanvasEvents } from './CanvasEvents.js';
@@ -90,6 +91,7 @@ export class CanvasManager {
         this.tools = new CanvasTools(this);
         this.renderer = new CanvasRenderer(this);
         this.events = new CanvasEvents(this);
+        this.selectionPanel = new SelectionPanel(this);
         this.imageHandler = new CanvasImage(this);
         this.textureHandler = new CanvasTexture(this);
 
