@@ -1,3 +1,5 @@
+import { checkIntersection, rasterizeWithEraser } from './utils/canvasUtils.js';
+
 export class CutAreaManager {
     constructor(canvasManager) {
         this.canvasManager = canvasManager;
@@ -148,71 +150,105 @@ export class CutAreaManager {
     copy() {
         if (!this.selectionRect || this.selectionRect.width === 0 || this.selectionRect.height === 0) return;
 
+        const { left, top, width, height } = this.selectionRect;
         const activeLayerId = this.canvasManager.layerManager.activeLayerId;
-        const hiddenObjects = [];
 
-        this.canvas.getObjects().forEach(obj => {
-            if (obj.isBg || obj.isSelectionRect || obj.isEraser || obj.layerId !== activeLayerId) {
-                if (obj.visible !== false) {
-                    obj.visible = false;
-                    hiddenObjects.push(obj);
-                }
-            }
+        const offscreen = document.createElement('canvas');
+        offscreen.width = this.canvas.width;
+        offscreen.height = this.canvas.height;
+        const ctx = offscreen.getContext('2d');
+
+        const layerObjects = this.canvas.getObjects().filter(
+            obj => obj.layerId === activeLayerId && !obj.isBg && !obj.isSelectionRect
+        );
+
+        layerObjects.forEach(obj => {
+            const el = obj.toCanvasElement({ multiplier: 1 });
+            const b = obj.getBoundingRect(true, true);
+            ctx.save();
+            ctx.globalCompositeOperation = obj.globalCompositeOperation || 'source-over';
+            ctx.globalAlpha = obj.opacity ?? 1;
+            ctx.drawImage(el, b.left, b.top, b.width, b.height);
+            ctx.restore();
         });
 
-        this.clipboardDataURL = this.canvas.toDataURL({
-            format: 'png',
-            left: this.selectionRect.left,
-            top: this.selectionRect.top,
-            width: this.selectionRect.width,
-            height: this.selectionRect.height,
-            multiplier: 1
-        });
+        const cropCanvas = document.createElement('canvas');
+        cropCanvas.width = Math.round(width);
+        cropCanvas.height = Math.round(height);
+        cropCanvas.getContext('2d').drawImage(
+            offscreen,
+            Math.round(left), Math.round(top), Math.round(width), Math.round(height),
+            0, 0, Math.round(width), Math.round(height)
+        );
 
-        this.clipboardBounds = {
-            left: this.selectionRect.left,
-            top: this.selectionRect.top,
-            width: this.selectionRect.width,
-            height: this.selectionRect.height
-        };
-
-        hiddenObjects.forEach(obj => obj.visible = true);
-        this.canvas.renderAll();
+        this.clipboardDataURL = cropCanvas.toDataURL('image/png');
+        this.clipboardBounds = { left, top, width, height };
     }
 
     cut() {
-        if (!this.selectionRect) return;
+        if (!this.selectionRect || this.selectionRect.width === 0 || this.selectionRect.height === 0) return;
         this.copy();
-        this.deleteSelection();
+        if (this.clipboardDataURL) this.deleteSelection();
     }
 
-    deleteSelection() {
+    async deleteSelection() {
         if (!this.selectionRect || this.selectionRect.width === 0 || this.selectionRect.height === 0) return;
 
-        const eraserRect = new fabric.Rect({
-            left: this.selectionRect.left,
-            top: this.selectionRect.top,
-            width: this.selectionRect.width,
-            height: this.selectionRect.height,
+        const { left, top, width, height } = this.selectionRect;
+        const activeLayerId = this.canvasManager.layerManager.activeLayerId;
+        const historyManager = this.canvasManager.historyManager;
+
+        const selBbox = { left, top, width, height };
+        const targets = this.canvas.getObjects().filter(obj =>
+            obj.layerId === activeLayerId &&
+            !obj.isBg &&
+            !obj.isSelectionRect &&
+            checkIntersection(obj.getBoundingRect(), selBbox)
+        );
+
+        if (targets.length === 0) return;
+
+        const prevURL = await historyManager.captureLayerDataURL(activeLayerId);
+        const prevObjects = historyManager.snapshotLayerObjects(activeLayerId);
+
+        const cutShape = new fabric.Rect({
+            left,
+            top,
+            width,
+            height,
             fill: '#000000',
-            globalCompositeOperation: 'destination-out',
-            layerId: this.canvasManager.layerManager.activeLayerId,
             selectable: false,
             evented: false,
-            isEraser: true
+            objectCaching: false
         });
 
-        this.canvas.add(eraserRect);
-        this.canvas.renderAll();
-        this.canvasManager.historyManager.addCommand(eraserRect);
+        for (const obj of targets) {
+            const currentIndex = this.canvas.getObjects().indexOf(obj);
+            const result = await rasterizeWithEraser(obj, cutShape);
+
+            if (result.removed) {
+                this.canvas.remove(obj);
+            } else {
+                this.canvas.remove(obj);
+                if (currentIndex > -1) {
+                    this.canvas.insertAt(result.img, currentIndex, false);
+                } else {
+                    this.canvas.add(result.img);
+                }
+            }
+        }
+
+        this.canvas.requestRenderAll();
+        const nextURL = await historyManager.captureLayerDataURL(activeLayerId);
+        historyManager.rasterCommand(prevURL, nextURL, activeLayerId, prevObjects);
     }
 
     paste() {
         if (!this.clipboardDataURL || !this.clipboardBounds) return;
 
-        if (!CutAreaManager._copyCount) CutAreaManager._copyCount = 0;
-        CutAreaManager._copyCount += 1;
-        this.canvasManager.layerManager.addLayer(`Copy Layer ${CutAreaManager._copyCount}`);
+        if (!this.canvasManager._copyCount) this.canvasManager._copyCount = 0;
+        this.canvasManager._copyCount += 1;
+        this.canvasManager.layerManager.addLayer(`Copy Layer ${this.canvasManager._copyCount}`);
         const newLayerId = this.canvasManager.layerManager.activeLayerId;
 
         fabric.Image.fromURL(this.clipboardDataURL, (img) => {
@@ -220,22 +256,16 @@ export class CutAreaManager {
                 left: this.clipboardBounds.left,
                 top: this.clipboardBounds.top,
                 layerId: newLayerId,
-                selectable: true,
-                evented: true
             });
-            this.canvas.add(img);
 
+            this.canvas.add(img);
             this.clearSelection();
 
-            const btnSelect = document.getElementById('btn-select');
-            if (btnSelect) {
-                btnSelect.click();
-            } else {
-                this.canvasManager.setTool('select');
-            }
+            this.canvasManager.setTool('select');
+            img.set({ selectable: true, evented: true });
 
             this.canvas.setActiveObject(img);
-            this.canvas.renderAll();
+            this.canvas.requestRenderAll();
             this.canvasManager.historyManager.addCommand(img);
         });
     }

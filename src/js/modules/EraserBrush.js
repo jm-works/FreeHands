@@ -1,55 +1,11 @@
 import { getStroke } from "https://esm.sh/perfect-freehand";
-
-function getBoundsFromImageData(imgData) {
-    const width = imgData.width;
-    const height = imgData.height;
-    const data = imgData.data;
-    let minX = width, minY = height, maxX = 0, maxY = 0;
-    let hasPixels = false;
-
-    for (let y = 0; y < height; y++) {
-        for (let x = 0; x < width; x++) {
-            const alpha = data[(y * width + x) * 4 + 3];
-            if (alpha > 5) {
-                if (x < minX) minX = x;
-                if (x > maxX) maxX = x;
-                if (y < minY) minY = y;
-                if (y > maxY) maxY = y;
-                hasPixels = true;
-            }
-        }
-    }
-
-    if (!hasPixels) return null;
-
-    return {
-        left: minX,
-        top: minY,
-        width: maxX - minX + 1,
-        height: maxY - minY + 1
-    };
-}
-
-function checkIntersection(bbox1, bbox2) {
-    return (
-        bbox1.left < bbox2.left + bbox2.width &&
-        bbox1.left + bbox1.width > bbox2.left &&
-        bbox1.top < bbox2.top + bbox2.height &&
-        bbox1.top + bbox1.height > bbox2.top
-    );
-}
-
-const cloneObjectAsync = (obj) => {
-    return new Promise((resolve) => {
-        obj.clone((cloned) => resolve(cloned));
-    });
-};
-
-const createImageAsync = (url) => {
-    return new Promise((resolve) => {
-        fabric.Image.fromURL(url, (img) => resolve(img));
-    });
-};
+import {
+    getBoundsFromImageData,
+    checkIntersection,
+    cloneObjectAsync,
+    createImageAsync,
+    rasterizeWithEraser
+} from './utils/canvasUtils.js';
 
 export const EraserBrush = fabric.util.createClass(fabric.BaseBrush, {
     initialize: function (canvas) {
@@ -178,7 +134,9 @@ export const EraserBrush = fabric.util.createClass(fabric.BaseBrush, {
         );
 
         const eraserBbox = eraserPath.getBoundingRect();
-        const intersectingObjects = objects.filter(obj => checkIntersection(obj.getBoundingRect(), eraserBbox));
+        const intersectingObjects = objects.filter(obj =>
+            checkIntersection(obj.getBoundingRect(), eraserBbox)
+        );
 
         if (intersectingObjects.length === 0) return;
 
@@ -191,66 +149,17 @@ export const EraserBrush = fabric.util.createClass(fabric.BaseBrush, {
             : [];
 
         for (const obj of intersectingObjects) {
-            const objBbox = obj.getBoundingRect();
-            const pad = 10;
-            const cWidth = objBbox.width + pad * 2;
-            const cHeight = objBbox.height + pad * 2;
-
-            const staticCanvas = new fabric.StaticCanvas(null, {
-                width: cWidth,
-                height: cHeight,
-                enableRetinaScaling: false
-            });
-
-            staticCanvas.viewportTransform = [1, 0, 0, 1, -objBbox.left + pad, -objBbox.top + pad];
-
-            const clonedObj = await cloneObjectAsync(obj);
-            staticCanvas.add(clonedObj);
-
-            const clonedEraser = await cloneObjectAsync(eraserPath);
-            clonedEraser.set({ globalCompositeOperation: 'destination-out' });
-            staticCanvas.add(clonedEraser);
-
-            staticCanvas.renderAll();
-
-            const ctx = staticCanvas.getContext();
-            const imgData = ctx.getImageData(0, 0, cWidth, cHeight);
-            const bounds = getBoundsFromImageData(imgData);
-
             const currentIndex = canvas.getObjects().indexOf(obj);
+            const result = await rasterizeWithEraser(obj, eraserPath);
 
-            if (!bounds) {
+            if (result.removed) {
                 if (currentIndex > -1) canvas.remove(obj);
             } else {
-                const croppedCanvas = document.createElement('canvas');
-                croppedCanvas.width = bounds.width;
-                croppedCanvas.height = bounds.height;
-                const croppedCtx = croppedCanvas.getContext('2d');
-
-                const tempCanvas = document.createElement('canvas');
-                tempCanvas.width = cWidth;
-                tempCanvas.height = cHeight;
-                tempCanvas.getContext('2d').putImageData(imgData, 0, 0);
-
-                croppedCtx.drawImage(tempCanvas, bounds.left, bounds.top, bounds.width, bounds.height, 0, 0, bounds.width, bounds.height);
-
-                const img = await createImageAsync(croppedCanvas.toDataURL());
-
-                img.set({
-                    left: objBbox.left - pad + bounds.left,
-                    top: objBbox.top - pad + bounds.top,
-                    layerId: obj.layerId,
-                    selectable: false,
-                    evented: false,
-                    opacity: obj.opacity || 1,
-                    globalCompositeOperation: obj.globalCompositeOperation || 'source-over'
-                });
-
+                canvas.remove(obj);
                 if (currentIndex > -1) {
-                    canvas.remove(obj);
-                    canvas.insertAt(img, currentIndex, false);
+                    canvas.insertAt(result.img, currentIndex, false);
                 } else {
-                    canvas.add(img);
+                    canvas.add(result.img);
                 }
             }
         }
