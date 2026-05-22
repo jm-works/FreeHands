@@ -99,14 +99,17 @@ export class CanvasManager {
     }
 
     init() {
-        setTimeout(() => this.canvas.calcOffset(), 100);
         window.addEventListener('resize', () => this.canvas.calcOffset());
 
         this.events.addEventListeners();
         this.cursorManager.updateSize(this.brushSize, this.zoom);
         this.cursorManager.updateSystemCursor(this.isSpacePressed, this.isPanning);
         this.renderer.overrideRender();
-        this.tools.setTool('brush');
+
+        setTimeout(() => {
+            this.canvas.calcOffset();
+            this.tools.setTool('brush');
+        }, 100);
     }
 
     updateTransform() {
