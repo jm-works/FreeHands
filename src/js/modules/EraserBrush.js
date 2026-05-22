@@ -141,7 +141,11 @@ export const EraserBrush = fabric.util.createClass(fabric.BaseBrush, {
         const path2d = new Path2D(pathData);
 
         ctx.save();
-        ctx.fillStyle = 'rgba(61, 174, 233, 0.5)';
+        ctx.fillStyle = 'rgba(192, 57, 43, 0.35)';
+        ctx.strokeStyle = 'rgba(192, 57, 43, 0.7)';
+        ctx.lineWidth = 1;
+        ctx.stroke(path2d);
+        ctx.fill(path2d, 'nonzero');
         ctx.globalCompositeOperation = 'source-over';
         ctx.fill(path2d, 'nonzero');
         ctx.restore();
