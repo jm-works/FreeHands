@@ -122,6 +122,7 @@ export class CanvasTools {
         }
 
         this.cm.canvas.requestRenderAll();
+        if (this.cm.onToolChange) this.cm.onToolChange(tool);
     }
 
     getBrushColorAsRGBA() {
@@ -146,6 +147,7 @@ export class CanvasTools {
             this.cm.canvas.freeDrawingBrush.width = this.cm.brushSize;
         }
         this.cm.cursorManager.updateSize(this.cm.brushSize, this.cm.zoom);
+        if (this.cm.onBrushSizeChange) this.cm.onBrushSizeChange(this.cm.brushSize);
     }
 
     setFillTolerance(val) {
@@ -157,5 +159,6 @@ export class CanvasTools {
         if (this.cm.canvas.freeDrawingBrush) {
             this.cm.canvas.freeDrawingBrush.color = this.getBrushColorAsRGBA();
         }
+        if (this.cm.onBrushOpacityChange) this.cm.onBrushOpacityChange(opacity);
     }
 }

@@ -295,6 +295,19 @@ document.addEventListener('DOMContentLoaded', () => {
         sizeSlider.style.setProperty('--slider-fill', `${percentage}%`);
     };
 
+    canvasManager.onBrushOpacityChange = (newOpacity) => {
+        opacitySlider.value = newOpacity;
+        opacityInput.value = newOpacity;
+        const min = parseFloat(opacitySlider.min) || 0;
+        const max = parseFloat(opacitySlider.max) || 100;
+        const percentage = ((newOpacity - min) / (max - min)) * 100;
+        opacitySlider.style.setProperty('--slider-fill', `${percentage}%`);
+    };
+
+    canvasManager.onToolChange = (tool) => {
+        updateActiveButtonUI(tool);
+    };
+
     function updateActiveButtonUI(toolId) {
         toolBtns.forEach(b => b.classList.remove('active'));
         const activeBtn = document.getElementById(`btn-${toolId}`);

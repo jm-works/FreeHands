@@ -244,65 +244,6 @@ export class CanvasEvents {
                     this.cm.canvas.requestRenderAll();
                 }
 
-            } else if (isCtrl && e.key.toLowerCase() === 'c' && !isInput) {
-                if (this.cm.currentTool === 'cutarea') {
-                    e.preventDefault();
-                    this.cm.cutAreaManager.copy();
-                } else if (this.cm.currentTool === 'select') {
-                    const activeObject = this.cm.canvas.getActiveObject();
-                    if (activeObject) {
-                        e.preventDefault();
-                        this.cm._pasteOffset = 0;
-                        activeObject.clone((cloned) => { this.cm._clipboard = cloned; });
-                    }
-                }
-
-            } else if (isCtrl && e.key.toLowerCase() === 'x' && !isInput) {
-                if (this.cm.currentTool === 'cutarea') {
-                    e.preventDefault();
-                    this.cm.cutAreaManager.cut();
-                } else if (this.cm.currentTool === 'select') {
-                    const activeObject = this.cm.canvas.getActiveObject();
-                    if (activeObject) {
-                        e.preventDefault();
-                        const activeObjects = this.cm.canvas.getActiveObjects();
-                        this.cm.historyManager.removeCommand(activeObjects);
-                        activeObjects.forEach(obj => this.cm.canvas.remove(obj));
-                        this.cm.canvas.discardActiveObject();
-                        this.cm.canvas.requestRenderAll();
-                        this.cm.canvas.selection = true;
-                        this.cm._pasteOffset = 0;
-                        activeObject.clone((cloned) => { this.cm._clipboard = cloned; });
-                    }
-                }
-
-            } else if (isCtrl && e.key.toLowerCase() === 'v' && !isInput) {
-                if (this.cm.currentTool === 'cutarea') {
-                    if (this.cm.cutAreaManager.clipboardDataURL) {
-                        e.preventDefault();
-                        this.cm.cutAreaManager.paste();
-                    }
-                } else if (this.cm.currentTool === 'select') {
-                    if (this.cm._clipboard) {
-                        e.preventDefault();
-                        this._selectPaste();
-                    }
-                }
-
-            } else if (isCtrl && e.key.toLowerCase() === 'd' && !isInput) {
-                if (this.cm.currentTool === 'select') {
-                    e.preventDefault();
-                    this._selectDuplicate();
-                }
-
-            } else if (isCtrl && e.key.toLowerCase() === 'z') {
-                e.preventDefault();
-                if (e.shiftKey) this.cm.historyManager.redo();
-                else this.cm.historyManager.undo();
-            } else if (isCtrl && e.key.toLowerCase() === 'y') {
-                e.preventDefault();
-                this.cm.historyManager.redo();
-
             } else if (e.key === 'Shift' && !this.cm.isShiftPressed && !isInput) {
                 this.cm.isShiftPressed = true;
                 if (this.cm.currentTool !== 'select') {
@@ -320,6 +261,8 @@ export class CanvasEvents {
                     if (this.cm.onSpaceToggle) this.cm.onSpaceToggle(true);
                 }
             }
+
+            if (!isInput) this.cm.shortcuts.dispatch(e);
         });
 
         window.addEventListener('keyup', (e) => {
@@ -473,8 +416,8 @@ export class CanvasEvents {
                 const rect = this.cm.board.getBoundingClientRect();
                 const x = (e.clientX - rect.left) / this.cm.zoom;
                 const y = (e.clientY - rect.top) / this.cm.zoom;
-                const sel = this.cm.cutAreaManager.selectionRect;
-                const clipBounds = (sel && sel.width > 0 && sel.height > 0)
+                const sel = this.cm.cutAreaManager.selection;
+                const clipBounds = sel
                     ? { left: sel.left, top: sel.top, width: sel.width, height: sel.height }
                     : null;
                 this.cm.fillManager.fill(x, y, this.cm.brushColor, this.cm.fillTolerance, this.cm.brushOpacity, clipBounds,

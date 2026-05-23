@@ -8,6 +8,7 @@ import { EllipseManager } from '../EllipseManager.js';
 import { AlignmentGuides } from '../AlignmentGuides.js';
 import { LineManager } from '../LineManager.js';
 import { SelectionPanel } from '../SelectionPanel.js';
+import { ShortcutManager } from '../ShortcutManager.js';
 
 import { CanvasRenderer } from './CanvasRenderer.js';
 import { CanvasEvents } from './CanvasEvents.js';
@@ -61,7 +62,9 @@ export class CanvasManager {
         this.isAltPressed = false;
 
         this.onBrushSizeChange = null;
+        this.onBrushOpacityChange = null;
         this.onSpaceToggle = null;
+        this.onToolChange = null;
 
         this.virtualX = window.innerWidth / 2;
         this.virtualY = window.innerHeight / 2;
@@ -91,6 +94,7 @@ export class CanvasManager {
         this.tools = new CanvasTools(this);
         this.renderer = new CanvasRenderer(this);
         this.events = new CanvasEvents(this);
+        this.shortcuts = new ShortcutManager(this);
         this.selectionPanel = new SelectionPanel(this);
         this.imageHandler = new CanvasImage(this);
         this.textureHandler = new CanvasTexture(this);
@@ -108,10 +112,10 @@ export class CanvasManager {
 
         setTimeout(() => {
             this.canvas.calcOffset();
-            this.tools.setTool(('pen'))
-            document.getElementById("btn-pen")?.click();
-            this.tools.setTool(('brush'))
-            document.getElementById("btn-brush")?.click();
+            this.tools.setTool('pen');
+            document.getElementById('btn-pen')?.click();
+            this.tools.setTool('brush');
+            document.getElementById('btn-brush')?.click();
         }, 100);
     }
 
@@ -126,6 +130,44 @@ export class CanvasManager {
     setFillTolerance(val) { this.tools.setFillTolerance(val); }
     getBrushColorAsRGBA() { return this.tools.getBrushColorAsRGBA(); }
     setBrushOpacity(opacity) { this.tools.setBrushOpacity(opacity); }
+
+    clipboardCopy() {
+        if (this.currentTool === 'cutarea') {
+            this.cutAreaManager.copy();
+        } else if (this.currentTool === 'select') {
+            const obj = this.canvas.getActiveObject();
+            if (obj) { this._pasteOffset = 0; obj.clone((c) => { this._clipboard = c; }); }
+        }
+    }
+
+    clipboardCut() {
+        if (this.currentTool === 'cutarea') {
+            this.cutAreaManager.cut();
+        } else if (this.currentTool === 'select') {
+            const obj = this.canvas.getActiveObject();
+            if (!obj) return;
+            const objs = this.canvas.getActiveObjects();
+            this.historyManager.removeCommand(objs);
+            objs.forEach(o => this.canvas.remove(o));
+            this.canvas.discardActiveObject();
+            this.canvas.requestRenderAll();
+            this.canvas.selection = true;
+            this._pasteOffset = 0;
+            obj.clone((c) => { this._clipboard = c; });
+        }
+    }
+
+    clipboardPaste() {
+        if (this.currentTool === 'cutarea' && this.cutAreaManager.clipboardDataURL) {
+            this.cutAreaManager.paste();
+        } else if (this.currentTool === 'select' && this._clipboard) {
+            this.events._selectPaste();
+        }
+    }
+
+    clipboardDuplicate() {
+        if (this.currentTool === 'select') this.events._selectDuplicate();
+    }
 
     resizeCanvas(width, height) {
         this.canvas.setWidth(width);
