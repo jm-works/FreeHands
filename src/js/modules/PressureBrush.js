@@ -7,9 +7,13 @@ export const PressureBrush = fabric.util.createClass(fabric.BaseBrush, {
         this.width = 4;
         this.points = [];
         this.pressureSensitivity = 1.0;
+        this.streamline = 0.7;
         this._lastPoint = null;
+        this._posBuffer = [];
         this._anchorPoint = null;
         this._isAltConstrained = false;
+        this._posBuffer = [];
+        this._posWindowSize = 1;
 
         this._onPointerMove = (e) => {
             if (!this.canvas.isDrawingMode || this.points.length === 0) return;
@@ -51,6 +55,9 @@ export const PressureBrush = fabric.util.createClass(fabric.BaseBrush, {
         this._anchorPoint = null;
     },
 
+    // PATCH — PressureBrush.js
+    // Substituir o bloco completo de addPoint por este:
+
     addPoint: function (pointer, e, isDown) {
         let rawPressure = 0.5;
         if (e && typeof e.pressure === 'number') {
@@ -62,6 +69,8 @@ export const PressureBrush = fabric.util.createClass(fabric.BaseBrush, {
         rawPressure = Math.pow(Math.max(0.01, rawPressure), 1.15) * this.pressureSensitivity;
 
         if (isDown) {
+            this._posBuffer = [];
+            this._lastRawPoint = { x: pointer.x, y: pointer.y };
             const pt = { x: pointer.x, y: pointer.y, pressure: rawPressure };
             this.points.push(pt);
             this._lastPoint = pt;
@@ -69,7 +78,7 @@ export const PressureBrush = fabric.util.createClass(fabric.BaseBrush, {
             return;
         }
 
-        if (!this._lastPoint) return;
+        if (!this._lastPoint || !this._lastRawPoint) return;
 
         let currentX = pointer.x;
         let currentY = pointer.y;
@@ -84,14 +93,28 @@ export const PressureBrush = fabric.util.createClass(fabric.BaseBrush, {
             }
         }
 
-        const dx = currentX - this._lastPoint.x;
-        const dy = currentY - this._lastPoint.y;
+        const dx = currentX - this._lastRawPoint.x;
+        const dy = currentY - this._lastRawPoint.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
 
         if (dist < 0.01) return;
 
+        this._lastRawPoint = { x: currentX, y: currentY };
+
+        this._posBuffer.push({ x: currentX, y: currentY });
+        if (this._posBuffer.length > this._posWindowSize) this._posBuffer.shift();
+
+        const bufLen = this._posBuffer.length;
+        let avgX = 0, avgY = 0;
+        for (let i = 0; i < bufLen; i++) {
+            avgX += this._posBuffer[i].x;
+            avgY += this._posBuffer[i].y;
+        }
+        avgX /= bufLen;
+        avgY /= bufLen;
+
         const pPressure = (this._lastPoint.pressure * 0.6) + (rawPressure * 0.4);
-        const pt = { x: currentX, y: currentY, pressure: pPressure };
+        const pt = { x: avgX, y: avgY, pressure: pPressure };
         this.points.push(pt);
         this._lastPoint = pt;
     },
@@ -104,7 +127,29 @@ export const PressureBrush = fabric.util.createClass(fabric.BaseBrush, {
             size: this.width,
             thinning: dynamicThinning,
             smoothing: 0.8,
-            streamline: 0.7,
+            streamline: 0.6,
+            simulatePressure: false,
+            last: isComplete,
+            start: {
+                cap: true,
+                taper: dynamicTaper,
+                easing: (t) => t * (2 - t)
+            },
+            end: {
+                cap: true,
+                taper: dynamicTaper,
+                easing: (t) => --t * t * t + 1
+            }
+        };
+    }, getStrokeOptions: function (isComplete) {
+        const dynamicTaper = Math.max(2, Math.min(this.width * 1.5, 30));
+        const dynamicThinning = Math.max(0.3, 0.75 - (this.width * 0.005));
+
+        return {
+            size: this.width,
+            thinning: dynamicThinning,
+            smoothing: 0.8,
+            streamline: this.streamline,
             simulatePressure: false,
             last: isComplete,
             start: {

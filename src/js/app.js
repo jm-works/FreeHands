@@ -216,6 +216,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const toleranceSlider = document.getElementById('fill-tolerance');
     const toleranceInput = document.getElementById('fill-tolerance-val');
 
+    const stabilizerContainer = document.getElementById('stabilizer-container');
+    const stabilizerSlider = document.getElementById('brush-stabilizer');
+    const stabilizerInput = document.getElementById('brush-stabilizer-val');
+
     const toolBtns = document.querySelectorAll('.tool-btn');
 
     function syncControls(slider, numberInput, callback) {
@@ -286,6 +290,10 @@ document.addEventListener('DOMContentLoaded', () => {
         canvasManager.setFillTolerance(val);
     });
 
+    syncControls(stabilizerSlider, stabilizerInput, (val) => {
+        canvasManager.setStabilizer(val);
+    });
+
     canvasManager.onBrushSizeChange = (newSize) => {
         sizeSlider.value = newSize;
         sizeInput.value = newSize;
@@ -326,21 +334,30 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.addEventListener('click', () => {
             const toolId = btn.id;
 
-            if (toolId === 'btn-brush' || toolId === 'btn-pen' || toolId === 'btn-rectangle' || toolId === 'btn-ellipse' || toolId === 'btn-line') {
+            if (toolId === 'btn-brush' || toolId === 'btn-pen') {
                 sizeContainer.style.display = 'block';
                 opacityContainer.style.display = 'block';
+                stabilizerContainer.style.display = 'block';
+                toleranceContainer.style.display = 'none';
+            } else if (toolId === 'btn-rectangle' || toolId === 'btn-ellipse' || toolId === 'btn-line') {
+                sizeContainer.style.display = 'block';
+                opacityContainer.style.display = 'block';
+                stabilizerContainer.style.display = 'none';
                 toleranceContainer.style.display = 'none';
             } else if (toolId === 'btn-eraser') {
                 sizeContainer.style.display = 'block';
                 opacityContainer.style.display = 'none';
+                stabilizerContainer.style.display = 'none';
                 toleranceContainer.style.display = 'none';
             } else if (toolId === 'btn-fill') {
                 sizeContainer.style.display = 'none';
                 opacityContainer.style.display = 'none';
+                stabilizerContainer.style.display = 'none';
                 toleranceContainer.style.display = 'block';
             } else {
                 sizeContainer.style.display = 'none';
                 opacityContainer.style.display = 'none';
+                stabilizerContainer.style.display = 'none';
                 toleranceContainer.style.display = 'none';
             }
 

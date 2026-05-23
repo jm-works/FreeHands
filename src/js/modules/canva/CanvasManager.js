@@ -45,6 +45,7 @@ export class CanvasManager {
 
         this.brushColor = '#000000';
         this.brushSize = 5;
+        this.stabilizerValue = 0;
         this.fillTolerance = 32;
         this.brushOpacity = 1;
         this.currentTool = 'brush';
@@ -126,6 +127,7 @@ export class CanvasManager {
 
     setTool(tool) { this.tools.setTool(tool); }
     setBrushColor(color) { this.tools.setBrushColor(color); }
+    setStabilizer(value) { this.tools.setStabilizer(value); }
     setBrushSize(size) { this.tools.setBrushSize(size); }
     setFillTolerance(val) { this.tools.setFillTolerance(val); }
     getBrushColorAsRGBA() { return this.tools.getBrushColorAsRGBA(); }

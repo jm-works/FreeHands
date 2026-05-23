@@ -1,5 +1,6 @@
 import { PressureBrush } from '../PressureBrush.js';
 import { EraserBrush } from '../EraserBrush.js';
+import { StabilizedPencilBrush } from '../StabilizedPencilBrush.js';
 
 const DRAWING_TOOLS = new Set(['brush', 'pen', 'eraser']);
 const CROSSHAIR_TOOLS = new Set(['fill', 'cutarea', 'rectangle', 'ellipse', 'line']);
@@ -92,10 +93,12 @@ export class CanvasTools {
         }
 
         if (tool === 'brush') {
-            this._setupDrawingTool(new PressureBrush(this.cm.canvas));
+            const brush = new PressureBrush(this.cm.canvas);
+            brush._posWindowSize = this._stabilizerWindowSize();
+            this._setupDrawingTool(brush);
         } else if (tool === 'pen') {
-            const brush = new fabric.PencilBrush(this.cm.canvas);
-            brush.decimate = 1.5;
+            const brush = new StabilizedPencilBrush(this.cm.canvas);
+            brush.windowSize = this._stabilizerWindowSize();
             this._setupDrawingTool(brush);
         } else if (tool === 'eraser') {
             const eraser = new EraserBrush(this.cm.canvas);
@@ -160,5 +163,31 @@ export class CanvasTools {
             this.cm.canvas.freeDrawingBrush.color = this.getBrushColorAsRGBA();
         }
         if (this.cm.onBrushOpacityChange) this.cm.onBrushOpacityChange(opacity);
+    }
+
+    _stabilizerWindowSize() {
+        const v = this.cm.stabilizerValue ?? 0;
+        return Math.round(1 + Math.pow(v / 100, 0.4) * 39);
+    }
+
+    _stabilizerStreamline() {
+        const v = this.cm.stabilizerValue ?? 0;
+        return 0.4 + Math.pow(v / 100, 0.7) * 0.55;
+    }
+
+    setStabilizer(value) {
+        this.cm.stabilizerValue = value;
+        const brush = this.cm.canvas.freeDrawingBrush;
+        if (!brush) return;
+
+        const size = this._stabilizerWindowSize();
+
+        if (brush instanceof PressureBrush) {
+            brush._posWindowSize = size;
+            brush._posBuffer = [];
+        } else if (brush instanceof StabilizedPencilBrush) {
+            brush.windowSize = size;
+            brush._buffer = [];
+        }
     }
 }
