@@ -58,7 +58,7 @@
 }
 
 .tool-btn:hover {
-    background-color: rgba(192, 57, 43, 0.12);
+    background-color: rgba(var(--accent-rgb), 0.12);
     border-color: var(--accent-dim);
 }
 
@@ -66,10 +66,12 @@
     filter: invert(1) sepia(0.1) brightness(1);
 }
 
-.tool-btn.active {
-    background-color: rgba(192, 57, 43, 0.2);
+.tool-btn.active,
+.text-style-btn.active,
+.text-align-btn.active {
+    background-color: rgba(var(--accent-rgb), 0.2);
     border-color: var(--accent-color);
-    box-shadow: inset 0 0 8px rgba(192, 57, 43, 0.15), 0 0 6px rgba(192, 57, 43, 0.2);
+    box-shadow: inset 0 0 8px rgba(var(--accent-rgb), 0.15), 0 0 6px rgba(var(--accent-rgb), 0.2);
 }
 
 .tool-btn.active img {
@@ -232,10 +234,43 @@
     color: var(--border-strong);
 }
 
-#text-controls {
+.toolbar-control--hidden {
     display: none;
-    align-items: center;
-    gap: 6px;
+}
+
+.toolbox-separator {
+    height: 1px;
+    background: var(--border-color);
+    width: 70%;
+    margin: 4px 0;
+}
+
+.toolbox-label {
+    text-align: center;
+    font-size: 0.6rem;
+    padding: 6px 4px;
+}
+
+.text-size-slider {
+    width: 120px;
+}
+
+.text-leading-slider {
+    width: 115px;
+}
+
+.text-spacing-slider {
+    width: 120px;
+}
+
+.text-size-slider,
+.text-leading-slider,
+.text-spacing-slider {
+    margin-left: 8px;
+}
+
+.text-size-slider {
+    margin-left: 16px;
 }
 
 .text-font-slider {
@@ -315,14 +350,8 @@
     color: var(--text-primary);
 }
 
-.text-style-btn.active {
-    background-color: rgba(192, 57, 43, 0.2);
-    border-color: var(--accent-color);
-    box-shadow: inset 0 0 8px rgba(192, 57, 43, 0.15), 0 0 6px rgba(192, 57, 43, 0.2);
-}
-
 .text-style-btn.active span {
-    color: #c0392b;
+    color: var(--accent-color);
 }
 
 .text-align-btn {
@@ -344,11 +373,8 @@
 }
 
 .text-align-btn.active {
-    background-color: rgba(192, 57, 43, 0.2);
-    border-color: var(--accent-color);
-    box-shadow: inset 0 0 8px rgba(192, 57, 43, 0.15), 0 0 6px rgba(192, 57, 43, 0.2);
-    color: #c0392b;
-    fill: #c0392b;
+    color: var(--accent-color);
+    fill: var(--accent-color);
 }
 
 .text-color-wrap {
@@ -367,11 +393,12 @@
     box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.4);
     transition: border-color 0.15s;
     pointer-events: none;
+    background-color: #000000;
 }
 
 .text-color-wrap:hover .text-color-swatch {
     border-color: var(--accent-color);
-    box-shadow: 0 0 6px rgba(192, 57, 43, 0.35);
+    box-shadow: 0 0 6px rgba(var(--accent-rgb), 0.35);
 }
 
 .text-color-wrap input[type="color"] {

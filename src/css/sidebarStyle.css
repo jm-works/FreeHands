@@ -108,7 +108,7 @@
 }
 
 .layer-btn:hover {
-    background-color: rgba(192, 57, 43, 0.18);
+    background-color: rgba(var(--accent-rgb), 0.18);
     border-color: var(--accent-dim);
     color: var(--text-primary);
 }
@@ -127,7 +127,7 @@
 
 .layer-btn-delete:hover {
     border-color: var(--accent-color);
-    background-color: rgba(192, 57, 43, 0.25);
+    background-color: rgba(var(--accent-rgb), 0.25);
 }
 
 .layer-btn-group {
@@ -235,7 +235,7 @@
 }
 
 .layer-item.active {
-    background: linear-gradient(to right, rgba(192, 57, 43, 0.14), rgba(192, 57, 43, 0.04));
+    background: linear-gradient(to right, rgba(var(--accent-rgb), 0.14), rgba(var(--accent-rgb), 0.04));
     border-left-color: var(--accent-color);
     color: var(--text-primary);
 }
@@ -379,7 +379,7 @@
 
 .layer-item.layer-dragging {
     opacity: 0.4;
-    background: rgba(192, 57, 43, 0.08);
+    background: rgba(var(--accent-rgb), 0.08);
 }
 
 .layer-item.layer-drop-over {

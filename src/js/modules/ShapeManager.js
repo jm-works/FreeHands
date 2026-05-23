@@ -127,7 +127,11 @@ export class ShapeManager {
         if (tooSmall) {
             this.canvas.remove(this.shape);
         } else {
-            this.cm.historyManager.addCommand(this.shape);
+            const committed = this.shape;
+            this.cm.historyManager.addCommand(committed);
+
+            this.cm.setTool('select');
+            this.canvas.setActiveObject(committed);
         }
 
         this.shape = null;

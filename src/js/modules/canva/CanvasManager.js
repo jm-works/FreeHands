@@ -142,28 +142,48 @@ export class CanvasManager {
     clipboardCopy() {
         if (this.currentTool === 'cutarea') {
             this.cutAreaManager.copy();
-        } else if (this.currentTool === 'select') {
-            const obj = this.canvas.getActiveObject();
-            if (obj) this.cutAreaManager.copyObject(obj);
+            return;
         }
+        if (this.currentTool !== 'select') return;
+        const obj = this.canvas.getActiveObject();
+        if (!obj) return;
+        obj.clone((cloned) => {
+            this._clipboard = cloned;
+            this._pasteOffset = 0;
+        });
     }
 
     clipboardCut() {
-        if (this.currentTool === 'select') {
-            const obj = this.canvas.getActiveObject();
-            if (obj) this.cutAreaManager.cutObject(obj);
+        if (this.currentTool === 'cutarea') {
+            this.cutAreaManager.cut();
+            return;
         }
+        if (this.currentTool !== 'select') return;
+        const obj = this.canvas.getActiveObject();
+        if (!obj) return;
+        obj.clone((cloned) => {
+            this._clipboard = cloned;
+            this._pasteOffset = 0;
+        });
+        // Remove after cloning (async-safe)
+        const targets = this.canvas.getActiveObjects();
+        this.historyManager.removeCommand(targets);
+        targets.forEach(o => this.canvas.remove(o));
+        this.canvas.discardActiveObject();
+        this.canvas.requestRenderAll();
     }
 
     clipboardPaste() {
-        this.cutAreaManager.paste();
+        if (this.currentTool === 'cutarea') {
+            this.cutAreaManager.paste();
+            return;
+        }
+        this.events._selectPaste();
     }
 
     clipboardDuplicate() {
-        if (this.currentTool === 'select') {
-            const obj = this.canvas.getActiveObject();
-            if (obj) this.cutAreaManager.duplicateObject(obj);
-        }
+        if (this.currentTool !== 'select') return;
+        this.events._selectDuplicate();
     }
 
     placeImage(dataURL) { this.imageHandler.placeImage(dataURL); }

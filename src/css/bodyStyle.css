@@ -1,29 +1,44 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Special+Elite&family=Oswald:wght@400;600;700&display=swap');
+/* Fonts loaded via <link> in index.html — no @import needed */
 
 :root {
+    /* Backgrounds */
     --bg-app: #111111;
     --bg-panel: #1a1a1a;
     --bg-workspace: #0d0d0d;
     --bg-canvas: #ffffff;
+
+    /* Text */
     --text-primary: #e0e0e0;
     --text-secondary: #808080;
     --text-accent: #a0a0a0;
+
+    /* Borders */
     --border-color: #2a2a2a;
     --border-strong: #404040;
 
+    /* Accent — RGB channel exposed for rgba() composition */
     --accent-color: #c0392b;
+    --accent-rgb: 192, 57, 43;
     --accent-dim: #7a1f18;
     --accent-gold: #5a5a5a;
 
+    /* Surfaces */
     --ink-dark: #050505;
 
+    /* Layout */
     --menu-height: 30px;
     --toolbar-height: 46px;
     --statusbar-height: 26px;
     --sidebar-width: 260px;
+
+    /* Typography */
     --font-display: 'Playfair Display', Georgia, serif;
     --font-mono: 'Special Elite', 'Courier New', monospace;
     --font-ui: 'Oswald', 'Arial Narrow', sans-serif;
+
+    /* Transitions */
+    --transition-fast: 0.1s ease;
+    --transition-ui: 0.15s ease;
 }
 
 * {
@@ -80,7 +95,7 @@ body {
     box-shadow:
         0 0 0 2px var(--border-strong),
         0 0 0 4px var(--ink-dark),
-        0 8px 40px rgba(192, 57, 43, 0.4),
+        0 8px 40px rgba(var(--accent-rgb), 0.4),
         0 2px 8px rgba(0, 0, 0, 0.6);
     cursor: crosshair;
 }
@@ -90,7 +105,7 @@ body {
     pointer-events: none;
     z-index: 9999;
     border-radius: 50%;
-    border: 1.5px solid rgba(192, 57, 43, 0.7);
+    border: 1.5px solid rgba(var(--accent-rgb), 0.7);
     box-shadow: 0 0 0 1px rgba(232, 223, 200, 0.3);
     background-color: transparent;
     transform: translate(-50%, -50%);

@@ -61,7 +61,7 @@
                 </div>
             </div>
 
-            <div class="value-slider" id="stabilizer-container" style="display: none;">
+            <div class="value-slider toolbar-control--hidden" id="stabilizer-container">
                 <input type="range" id="brush-stabilizer" min="0" max="100" value="0" class="tool-slider">
                 <div class="value-slider-overlay">
                     <label for="brush-stabilizer">Stabilizer</label>
@@ -72,7 +72,7 @@
                 </div>
             </div>
 
-            <div class="value-slider" id="tolerance-container" style="display: none;">
+            <div class="value-slider toolbar-control--hidden" id="tolerance-container">
                 <input type="range" id="fill-tolerance" min="0" max="255" value="32" class="tool-slider">
                 <div class="value-slider-overlay">
                     <label for="fill-tolerance">Tolerance</label>
@@ -82,7 +82,7 @@
                 </div>
             </div>
 
-            <div id="text-controls" style="display: none;">
+            <div id="text-controls" class="toolbar-control--hidden">
 
                 <div class="value-slider text-font-slider">
                     <select id="text-font" class="text-font-select">
@@ -102,7 +102,7 @@
                     </div>
                 </div>
 
-                <div class="value-slider" style="width: 120px;">
+                <div class="value-slider text-size-slider">
                     <input type="range" id="text-size" min="8" max="200" value="24" class="tool-slider">
                     <div class="value-slider-overlay">
                         <label for="text-size">Size</label>
@@ -113,7 +113,7 @@
                     </div>
                 </div>
 
-                <div class="value-slider" style="width: 115px;">
+                <div class="value-slider text-leading-slider">
                     <input type="range" id="text-leading" min="50" max="300" value="120" class="tool-slider">
                     <div class="value-slider-overlay">
                         <label for="text-leading">Leading</label>
@@ -124,7 +124,7 @@
                     </div>
                 </div>
 
-                <div class="value-slider" style="width: 120px;">
+                <div class="value-slider text-spacing-slider">
                     <input type="range" id="text-spacing" min="-200" max="800" value="0" class="tool-slider">
                     <div class="value-slider-overlay">
                         <label for="text-spacing">Spacing</label>
@@ -174,7 +174,7 @@
                 </div>
 
                 <div id="text-color-wrap" class="text-color-wrap" title="Text Color">
-                    <div id="text-color-swatch" class="text-color-swatch" style="background: #000000;"></div>
+                    <div id="text-color-swatch" class="text-color-swatch"></div>
                 </div>
 
             </div>
@@ -182,7 +182,7 @@
 
         <div class="main-workspace">
             <aside class="sidebar left-sidebar">
-                <div class="docker-title" style="text-align: center; font-size: 0.6rem; padding: 6px 4px;">Tools</div>
+                <div class="docker-title toolbox-label">Tools</div>
                 <div class="docker-content toolbox-grid">
 
                     <button class="tool-btn active" id="btn-brush" title="Brush">
@@ -229,7 +229,7 @@
                         <img src="src/assets/icons/Toolbar/select.svg" alt="Select" width="22" height="22">
                     </button>
 
-                    <div style="height: 1px; background: var(--border-color); width: 70%; margin: 4px 0;"></div>
+                    <div class="toolbox-separator"></div>
 
                     <button class="tool-btn" id="btn-pan" title="Pan">
                         <img src="src/assets/icons/Toolbar/hand.svg" alt="Pan" width="22" height="22">

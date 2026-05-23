@@ -472,9 +472,35 @@ document.addEventListener('DOMContentLoaded', () => {
         opacitySlider.style.setProperty('--slider-fill', `${percentage}%`);
     };
 
+    function updateToolbarUI(tool) {
+        const show = (el) => el && (el.style.display = 'block');
+        const hide = (el) => el && (el.style.display = 'none');
+        const hideText = () => hide(textControls);
+
+        if (tool === 'brush' || tool === 'pen') {
+            show(sizeContainer); show(opacityContainer); show(stabilizerContainer);
+            hide(toleranceContainer); hideText();
+        } else if (tool === 'rectangle' || tool === 'ellipse' || tool === 'line') {
+            show(sizeContainer); show(opacityContainer);
+            hide(stabilizerContainer); hide(toleranceContainer); hideText();
+        } else if (tool === 'eraser') {
+            show(sizeContainer);
+            hide(opacityContainer); hide(stabilizerContainer); hide(toleranceContainer); hideText();
+        } else if (tool === 'fill') {
+            show(toleranceContainer);
+            hide(sizeContainer); hide(opacityContainer); hide(stabilizerContainer); hideText();
+        } else if (tool === 'text') {
+            if (textControls) textControls.style.display = 'flex';
+            hide(sizeContainer); hide(opacityContainer); hide(stabilizerContainer); hide(toleranceContainer);
+        } else {
+            hide(sizeContainer); hide(opacityContainer); hide(stabilizerContainer);
+            hide(toleranceContainer); hideText();
+        }
+    }
+
     canvasManager.onToolChange = (tool) => {
         updateActiveButtonUI(tool);
-        if (tool !== 'text' && textControls) textControls.style.display = 'none';
+        updateToolbarUI(tool);
     };
 
     canvasManager.canvas.on('mouse:dblclick', (opt) => {
@@ -512,87 +538,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 'btn-text-align-left', 'btn-text-align-center', 'btn-text-align-right'];
             if (TEXT_STYLE_BTNS.includes(toolId)) return;
 
-            const hideText = () => { if (textControls) textControls.style.display = 'none'; };
-
-            if (toolId === 'btn-brush' || toolId === 'btn-pen') {
-                sizeContainer.style.display = 'block';
-                opacityContainer.style.display = 'block';
-                stabilizerContainer.style.display = 'block';
-                toleranceContainer.style.display = 'none';
-                hideText();
-            } else if (toolId === 'btn-rectangle' || toolId === 'btn-ellipse' || toolId === 'btn-line') {
-                sizeContainer.style.display = 'block';
-                opacityContainer.style.display = 'block';
-                stabilizerContainer.style.display = 'none';
-                toleranceContainer.style.display = 'none';
-                hideText();
-            } else if (toolId === 'btn-eraser') {
-                sizeContainer.style.display = 'block';
-                opacityContainer.style.display = 'none';
-                stabilizerContainer.style.display = 'none';
-                toleranceContainer.style.display = 'none';
-                hideText();
-            } else if (toolId === 'btn-fill') {
-                sizeContainer.style.display = 'none';
-                opacityContainer.style.display = 'none';
-                stabilizerContainer.style.display = 'none';
-                toleranceContainer.style.display = 'block';
-                hideText();
-            } else if (toolId === 'btn-text') {
-                sizeContainer.style.display = 'none';
-                opacityContainer.style.display = 'none';
-                stabilizerContainer.style.display = 'none';
-                toleranceContainer.style.display = 'none';
-                if (textControls) textControls.style.display = 'flex';
-            } else {
-                sizeContainer.style.display = 'none';
-                opacityContainer.style.display = 'none';
-                stabilizerContainer.style.display = 'none';
-                toleranceContainer.style.display = 'none';
-                hideText();
-            }
-
             switch (toolId) {
-                case 'btn-brush':
-                    canvasManager.setTool('brush');
-                    break;
-                case 'btn-pen':
-                    canvasManager.setTool('pen');
-                    break;
+                case 'btn-brush': canvasManager.setTool('brush'); break;
+                case 'btn-pen': canvasManager.setTool('pen'); break;
                 case 'btn-eyedropper':
                     canvasManager.setTool('eyedropper');
                     canvasManager.pickColor();
                     break;
-                case 'btn-eraser':
-                    canvasManager.setTool('eraser');
-                    break;
-                case 'btn-fill':
-                    canvasManager.setTool('fill');
-                    break;
-                case 'btn-rectangle':
-                    canvasManager.setTool('rectangle');
-                    break;
-                case 'btn-line':
-                    canvasManager.setTool('line');
-                    break;
-                case 'btn-ellipse':
-                    canvasManager.setTool('ellipse');
-                    break;
-                case 'btn-cutarea':
-                    canvasManager.setTool('cutarea');
-                    break;
-                case 'btn-select':
-                    canvasManager.setTool('select');
-                    break;
-                case 'btn-pan':
-                    canvasManager.setTool('pan');
-                    break;
-                case 'btn-text':
-                    canvasManager.setTool('text');
-                    break;
+                case 'btn-eraser': canvasManager.setTool('eraser'); break;
+                case 'btn-fill': canvasManager.setTool('fill'); break;
+                case 'btn-rectangle': canvasManager.setTool('rectangle'); break;
+                case 'btn-line': canvasManager.setTool('line'); break;
+                case 'btn-ellipse': canvasManager.setTool('ellipse'); break;
+                case 'btn-cutarea': canvasManager.setTool('cutarea'); break;
+                case 'btn-select': canvasManager.setTool('select'); break;
+                case 'btn-pan': canvasManager.setTool('pan'); break;
+                case 'btn-text': canvasManager.setTool('text'); break;
             }
-
-            updateActiveButtonUI(canvasManager.currentTool);
 
             canvasManager.eyeDropperManager.onColorPicked = (hex) => {
                 colorManager.setColorFromHex(hex);

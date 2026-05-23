@@ -44,12 +44,6 @@ export class TextManager {
                 this.cm.historyManager._assignUID(itext);
                 this.cm.historyManager.addCommand([itext]);
             }
-
-            requestAnimationFrame(() => {
-                if (this.cm.currentTool === 'text') {
-                    this.cm.setTool('select');
-                }
-            });
         });
     }
 

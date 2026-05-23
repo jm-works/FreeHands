@@ -9,33 +9,6 @@ const SELECTION_DISABLED_TOOLS = new Set(['cutarea', 'rectangle', 'ellipse', 'li
 export class CanvasTools {
     constructor(cm) {
         this.cm = cm;
-        this._initSelectionFilter();
-    }
-
-    _initSelectionFilter() {
-        this.cm.canvas.on('selection:created', (e) => {
-            if (this.cm.currentTool !== 'select') return;
-            if (!this.cm.layerManager) return;
-
-            const activeLayerId = this.cm.layerManager.activeLayerId;
-            const selected = this.cm.canvas.getActiveObjects();
-            const valid = selected.filter(obj => obj.layerId === activeLayerId);
-
-            if (valid.length === selected.length) return;
-
-            this.cm.canvas.discardActiveObject();
-
-            if (valid.length === 0) return;
-
-            if (valid.length === 1) {
-                this.cm.canvas.setActiveObject(valid[0]);
-            } else {
-                const sel = new fabric.ActiveSelection(valid, { canvas: this.cm.canvas });
-                this.cm.canvas.setActiveObject(sel);
-            }
-
-            this.cm.canvas.requestRenderAll();
-        });
     }
 
     _disableAllObjects() {

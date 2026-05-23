@@ -136,15 +136,15 @@ export class SelectionPanel {
 
     _getViewportBounds(fabricObject) {
         try {
-            const br = fabricObject.getBoundingRect(true);
             const boardRect = this.cm.board.getBoundingClientRect();
-
+            const zoom = this.cm.zoom;
+            const br = fabricObject.getBoundingRect(true);
             return {
-                left: boardRect.left + br.left * this.cm.zoom,
-                top: boardRect.top + br.top * this.cm.zoom,
-                width: br.width * this.cm.zoom,
-                height: br.height * this.cm.zoom,
-                bottom: boardRect.top + (br.top + br.height) * this.cm.zoom,
+                left: boardRect.left + br.left * zoom,
+                top: boardRect.top + br.top * zoom,
+                width: br.width * zoom,
+                height: br.height * zoom,
+                bottom: boardRect.top + (br.top + br.height) * zoom,
             };
         } catch {
             return null;
@@ -203,74 +203,67 @@ export class SelectionPanel {
 
         const isMulti = obj.type === 'activeSelection';
         const targets = isMulti ? obj.getObjects() : [obj];
-        const refBounds = isMulti
-            ? obj.getBoundingRect(true)
-            : { left: 0, top: 0, width: this.cm.canvas.width, height: this.cm.canvas.height };
+        const canvas = this.cm.canvas;
+        const refBounds = { left: 0, top: 0, width: canvas.width, height: canvas.height };
 
         const prev = targets.map(o => ({ left: o.left, top: o.top }));
 
-        targets.forEach(o => {
+        if (isMulti) {
+            canvas.discardActiveObject();
+
+            const groupAbsBounds = (() => {
+                let minL = Infinity, minT = Infinity, maxR = -Infinity, maxB = -Infinity;
+                targets.forEach(o => {
+                    const br = o.getBoundingRect(true);
+                    minL = Math.min(minL, br.left);
+                    minT = Math.min(minT, br.top);
+                    maxR = Math.max(maxR, br.left + br.width);
+                    maxB = Math.max(maxB, br.top + br.height);
+                });
+                return { left: minL, top: minT, width: maxR - minL, height: maxB - minT };
+            })();
+
+            let dx = 0, dy = 0;
+            switch (direction) {
+                case 'left': dx = refBounds.left - groupAbsBounds.left; break;
+                case 'center': dx = (refBounds.width / 2) - (groupAbsBounds.left + groupAbsBounds.width / 2); break;
+                case 'right': dx = refBounds.width - (groupAbsBounds.left + groupAbsBounds.width); break;
+                case 'top': dy = refBounds.top - groupAbsBounds.top; break;
+                case 'middle': dy = (refBounds.height / 2) - (groupAbsBounds.top + groupAbsBounds.height / 2); break;
+                case 'bottom': dy = refBounds.height - (groupAbsBounds.top + groupAbsBounds.height); break;
+            }
+
+            targets.forEach(o => {
+                o.set({ left: o.left + dx, top: o.top + dy });
+                o.setCoords();
+            });
+
+            const sel = new fabric.ActiveSelection(targets, { canvas });
+            canvas.setActiveObject(sel);
+            sel.setCoords();
+        } else {
+            const o = targets[0];
             const ow = o.getScaledWidth();
             const oh = o.getScaledHeight();
-
-            const abs = isMulti ? fabric.util.transformPoint(
-                { x: o.left, y: o.top },
-                obj.calcTransformMatrix()
-            ) : { x: o.left, y: o.top };
-
-            const toLocal = (absX, absY) => {
-                if (!isMulti) return { x: absX, y: absY };
-                const inv = fabric.util.invertTransform(obj.calcTransformMatrix());
-                return fabric.util.transformPoint({ x: absX, y: absY }, inv);
-            };
-
             switch (direction) {
-                case 'left': {
-                    const targetAbsX = refBounds.left + (o.originX === 'center' ? ow / 2 : 0);
-                    const local = toLocal(targetAbsX, abs.y);
-                    o.set('left', local.x);
-                    break;
-                }
-                case 'center': {
-                    const targetAbsX = refBounds.left + refBounds.width / 2 + (o.originX === 'center' ? 0 : -ow / 2);
-                    const local = toLocal(targetAbsX, abs.y);
-                    o.set('left', local.x);
-                    break;
-                }
-                case 'right': {
-                    const targetAbsX = refBounds.left + refBounds.width - (o.originX === 'center' ? ow / 2 : ow);
-                    const local = toLocal(targetAbsX, abs.y);
-                    o.set('left', local.x);
-                    break;
-                }
-                case 'top': {
-                    const targetAbsY = refBounds.top + (o.originY === 'center' ? oh / 2 : 0);
-                    const local = toLocal(abs.x, targetAbsY);
-                    o.set('top', local.y);
-                    break;
-                }
-                case 'middle': {
-                    const targetAbsY = refBounds.top + refBounds.height / 2 + (o.originY === 'center' ? 0 : -oh / 2);
-                    const local = toLocal(abs.x, targetAbsY);
-                    o.set('top', local.y);
-                    break;
-                }
-                case 'bottom': {
-                    const targetAbsY = refBounds.top + refBounds.height - (o.originY === 'center' ? oh / 2 : oh);
-                    const local = toLocal(abs.x, targetAbsY);
-                    o.set('top', local.y);
-                    break;
-                }
+                case 'left': o.set('left', refBounds.left + (o.originX === 'center' ? ow / 2 : 0)); break;
+                case 'center': o.set('left', refBounds.width / 2 + (o.originX === 'center' ? 0 : -ow / 2)); break;
+                case 'right': o.set('left', refBounds.width - (o.originX === 'center' ? ow / 2 : ow)); break;
+                case 'top': o.set('top', refBounds.top + (o.originY === 'center' ? oh / 2 : 0)); break;
+                case 'middle': o.set('top', refBounds.height / 2 + (o.originY === 'center' ? 0 : -oh / 2)); break;
+                case 'bottom': o.set('top', refBounds.height - (o.originY === 'center' ? oh / 2 : oh)); break;
             }
             o.setCoords();
-        });
-
-        if (isMulti) obj.setCoords();
+        }
 
         const next = targets.map(o => ({ left: o.left, top: o.top }));
         this.cm.historyManager.modifyCommand(targets, prev, next);
-        this.cm.canvas.requestRenderAll();
-        this.show(obj);
+        canvas.requestRenderAll();
+
+        requestAnimationFrame(() => {
+            const active = canvas.getActiveObject();
+            if (active) this.show(active);
+        });
     }
 
     _distribute(axis) {
@@ -307,6 +300,14 @@ export class SelectionPanel {
     _bindCanvasEvents() {
         const canvas = this.cm.canvas;
 
+        canvas.on('selection:created', (e) => {
+            if (this.cm.currentTool !== 'select') return;
+            requestAnimationFrame(() => {
+                const obj = canvas.getActiveObject();
+                if (obj) this.show(obj);
+            });
+        });
+
         const onSelect = (e) => {
             if (this.cm.currentTool !== 'select') return;
             this.show(e.selected?.[0] ?? canvas.getActiveObject());
@@ -321,7 +322,6 @@ export class SelectionPanel {
         const onMoving = () => this._deferHide();
         const onScaling = () => this._deferHide();
 
-        canvas.on('selection:created', onSelect);
         canvas.on('selection:updated', onSelect);
         canvas.on('selection:cleared', () => this.hide());
         canvas.on('object:moving', onMoving);

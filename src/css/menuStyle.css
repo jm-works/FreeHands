@@ -37,7 +37,7 @@
 .menu-item:hover {
     background-color: var(--accent-color);
     color: var(--text-primary);
-    text-shadow: 0 0 8px rgba(192, 57, 43, 0.6);
+    text-shadow: 0 0 8px rgba(var(--accent-rgb), 0.6);
 }
 
 .dropdown-menu {

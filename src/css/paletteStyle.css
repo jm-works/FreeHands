@@ -133,7 +133,7 @@
 .palette-add-btn:hover {
     border-color: var(--accent-color);
     color: var(--accent-color);
-    background-color: rgba(192, 57, 43, 0.08);
+    background-color: rgba(var(--accent-rgb), 0.08);
 }
 
 input[type="color"] {
