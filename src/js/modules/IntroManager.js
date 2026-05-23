@@ -265,10 +265,11 @@ export class IntroManager {
         this.ctx.lineWidth = 1.2;
         for (let i = 0; i < 110; i++) {
             const sx = ((i * 137.508) % 1) * this.W;
-            const sy = ((i * 73.311 + t * 0.12) % 1) * this.H;
+            const sy = (i * 73.311 * this.H + t * 30) % this.H;
+            const len = this.lerp(this.H * 0.03, this.H * 0.07, (i * 0.317) % 1);
             this.ctx.beginPath();
             this.ctx.moveTo(sx, sy);
-            this.ctx.lineTo(sx - 5, sy + this.H * 0.05);
+            this.ctx.lineTo(sx - 3, sy + len);
             this.ctx.stroke();
         }
         this.ctx.restore();
