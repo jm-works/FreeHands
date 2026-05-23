@@ -14,15 +14,9 @@ export const PressureBrush = fabric.util.createClass(fabric.BaseBrush, {
         this._onPointerMove = (e) => {
             if (!this.canvas.isDrawingMode || this.points.length === 0) return;
 
-            const rect = this.canvas.upperCanvasEl.getBoundingClientRect();
-            const zoom = this.canvas.getZoom();
             const coalesced = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
-
             for (const ce of coalesced) {
-                const pointer = {
-                    x: (ce.clientX - rect.left) / zoom,
-                    y: (ce.clientY - rect.top) / zoom
-                };
+                const pointer = this.canvas.getPointer(ce);
                 this.addPoint(pointer, ce, false);
             }
 

@@ -108,7 +108,10 @@ export class CanvasManager {
 
         setTimeout(() => {
             this.canvas.calcOffset();
-            this.tools.setTool('brush');
+            this.tools.setTool(('pen'))
+            document.getElementById("btn-pen")?.click();
+            this.tools.setTool(('brush'))
+            document.getElementById("btn-brush")?.click();
         }, 100);
     }
 
