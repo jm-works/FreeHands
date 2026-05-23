@@ -43,17 +43,18 @@ export class CursorManager {
     }
 
     updateSystemCursor(isSpacePressed, isPanning) {
-        if (isSpacePressed) {
+        if (isPanning) {
             this.hide();
-            const grabCursor = isPanning ? 'grabbing' : 'grab';
-            this.container.style.cursor = grabCursor;
-            this.canvas.style.cursor = grabCursor;
+            this.container.style.cursor = 'grabbing';
+            this.canvas.style.cursor = 'grabbing';
+        } else if (isSpacePressed) {
+            this.container.style.cursor = 'grab';
+            this.canvas.style.cursor = 'grab';
+            this.show();
         } else {
             this.container.style.cursor = 'none';
             this.canvas.style.cursor = 'none';
-            if (this.isVisible) {
-                this.show();
-            }
+            this.show();
         }
     }
 }

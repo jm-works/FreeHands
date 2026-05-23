@@ -39,10 +39,7 @@ export class CanvasEvents {
                 const children = [];
                 clonedObj.forEachObject((obj) => {
                     obj.set('layerId', activeLayerId);
-                    obj.set({
-                        left: obj.left + offset,
-                        top: obj.top + offset,
-                    });
+                    obj.set({ left: obj.left + offset, top: obj.top + offset });
                     applySelectStyle(obj);
                     obj.set({ padding: obj.type === 'line' ? 10 : 0 });
                     this.cm.historyManager._assignUID(obj);
@@ -52,11 +49,7 @@ export class CanvasEvents {
                 clonedObj.setCoords();
                 this.cm.historyManager.addCommand(children);
             } else {
-                clonedObj.set({
-                    left: clonedObj.left + offset,
-                    top: clonedObj.top + offset,
-                    layerId: activeLayerId,
-                });
+                clonedObj.set({ left: clonedObj.left + offset, top: clonedObj.top + offset, layerId: activeLayerId });
                 applySelectStyle(clonedObj);
                 this.cm.historyManager._assignUID(clonedObj);
                 this.cm.canvas.add(clonedObj);
@@ -127,7 +120,6 @@ export class CanvasEvents {
         this.cm.historyManager.modifyCommand(targets, prevProps, nextProps);
         this.cm.canvas.requestRenderAll();
     }
-
 
     addEventListeners() {
         window.addEventListener('keydown', (e) => {
@@ -261,9 +253,7 @@ export class CanvasEvents {
                     if (activeObject) {
                         e.preventDefault();
                         this.cm._pasteOffset = 0;
-                        activeObject.clone((cloned) => {
-                            this.cm._clipboard = cloned;
-                        });
+                        activeObject.clone((cloned) => { this.cm._clipboard = cloned; });
                     }
                 }
 
@@ -276,17 +266,13 @@ export class CanvasEvents {
                     if (activeObject) {
                         e.preventDefault();
                         const activeObjects = this.cm.canvas.getActiveObjects();
-
                         this.cm.historyManager.removeCommand(activeObjects);
                         activeObjects.forEach(obj => this.cm.canvas.remove(obj));
                         this.cm.canvas.discardActiveObject();
                         this.cm.canvas.requestRenderAll();
                         this.cm.canvas.selection = true;
-
                         this.cm._pasteOffset = 0;
-                        activeObject.clone((cloned) => {
-                            this.cm._clipboard = cloned;
-                        });
+                        activeObject.clone((cloned) => { this.cm._clipboard = cloned; });
                     }
                 }
 
@@ -431,7 +417,7 @@ export class CanvasEvents {
                 this.cm.canvas.isDrawingMode = false;
                 this.cm.lastPosX = e.clientX;
                 this.cm.lastPosY = e.clientY;
-                this.cm.cursorManager.updateSystemCursor(true, this.cm.isPanning);
+                this.cm.cursorManager.updateSystemCursor(true, true);
                 return;
             }
 
@@ -561,6 +547,16 @@ export class CanvasEvents {
         });
 
         window.addEventListener('pointerup', (e) => {
+            if (e.button === 1) {
+                this.cm.isPanning = false;
+                this.cm.cursorManager.updateSystemCursor(this.cm.isSpacePressed, false);
+                if (this.cm.currentTool !== 'pan' && !this.cm.isSpacePressed) {
+                    const isDrawingTool = this.cm.currentTool === 'brush' || this.cm.currentTool === 'pen' || this.cm.currentTool === 'eraser';
+                    if (isDrawingTool) this.cm.canvas.isDrawingMode = true;
+                }
+                return;
+            }
+
             if (this.cm.currentTool === 'cutarea') this.cm.cutAreaManager.onMouseUp();
             if (this.cm.currentTool === 'rectangle') this.cm.rectangleManager.onMouseUp();
             if (this.cm.currentTool === 'line') this.cm.lineManager.onMouseUp();
