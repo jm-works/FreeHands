@@ -103,6 +103,10 @@ export class CanvasTools {
         } else if (tool === 'eraser') {
             const eraser = new EraserBrush(this.cm.canvas);
             this._setupDrawingTool(eraser);
+        } else if (tool === 'eyedropper') {
+            this.cm.canvas.isDrawingMode = false;
+            this.cm.canvas.defaultCursor = 'crosshair';
+            this.cm.cursorManager.hide();
         } else if (CROSSHAIR_TOOLS.has(tool)) {
             this.cm.canvas.isDrawingMode = false;
             this.cm.canvas.defaultCursor = 'crosshair';

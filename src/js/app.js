@@ -204,6 +204,10 @@ document.addEventListener('DOMContentLoaded', () => {
         canvasManager.setBrushColor(color);
     });
 
+    canvasManager.eyeDropperManager.onColorPicked = (hex) => {
+        colorManager.setColorFromHex(hex);
+    };
+
     const sizeContainer = document.getElementById('size-container');
     const sizeSlider = document.getElementById('brush-size');
     const sizeInput = document.getElementById('brush-size-val');
@@ -368,6 +372,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 case 'btn-pen':
                     canvasManager.setTool('pen');
                     break;
+                case 'btn-eyedropper':
+                    canvasManager.setTool('eyedropper');
+                    canvasManager.pickColor();
+                    break;
                 case 'btn-eraser':
                     canvasManager.setTool('eraser');
                     break;
@@ -395,6 +403,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             updateActiveButtonUI(canvasManager.currentTool);
+
+            canvasManager.eyeDropperManager.onColorPicked = (hex) => {
+                colorManager.setColorFromHex(hex);
+            };
         });
     });
 });

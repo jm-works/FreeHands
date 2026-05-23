@@ -47,6 +47,7 @@ export class ShortcutManager {
         this.register('k', cm => cm.setTool('cutarea'));
         this.register('v', cm => cm.setTool('select'));
         this.register('h', cm => cm.setTool('pan'));
+        this.register('i', cm => cm.pickColor());
 
         this.register(']', cm => cm.setBrushSize(Math.min(cm.brushSize + 2, 100)));
         this.register('[', cm => cm.setBrushSize(Math.max(cm.brushSize - 2, 1)));

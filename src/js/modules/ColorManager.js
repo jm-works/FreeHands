@@ -315,6 +315,14 @@ export class ColorManager {
         return '#' + [m[1], m[2], m[3]].map(x => parseInt(x).toString(16).padStart(2, '0')).join('');
     }
 
+    setColorFromHex(hex) {
+        const hsv = hexToHsv(hex);
+        this.hue = hsv.h;
+        this.sat = hsv.s;
+        this.val = hsv.v;
+        this.update();
+    }
+
     createDefaultPalette() {
         const palette = document.getElementById('color-palette');
         if (!palette) return;

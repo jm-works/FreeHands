@@ -9,6 +9,7 @@ import { AlignmentGuides } from '../AlignmentGuides.js';
 import { LineManager } from '../LineManager.js';
 import { SelectionPanel } from '../SelectionPanel.js';
 import { ShortcutManager } from '../ShortcutManager.js';
+import { EyeDropperManager } from '../EyeDropperManager.js';
 
 import { CanvasRenderer } from './CanvasRenderer.js';
 import { CanvasEvents } from './CanvasEvents.js';
@@ -88,6 +89,7 @@ export class CanvasManager {
         this.layerManager = new LayerManager(this);
         this.alignmentGuides = new AlignmentGuides(this);
         this.lineManager = new LineManager(this);
+        this.eyeDropperManager = new EyeDropperManager(this);
 
         this.canvas.layerManager = this.layerManager;
         this.canvas.historyManager = this.historyManager;
@@ -132,6 +134,7 @@ export class CanvasManager {
     setFillTolerance(val) { this.tools.setFillTolerance(val); }
     getBrushColorAsRGBA() { return this.tools.getBrushColorAsRGBA(); }
     setBrushOpacity(opacity) { this.tools.setBrushOpacity(opacity); }
+    pickColor() { return this.eyeDropperManager.pick(); }
 
     clipboardCopy() {
         if (this.currentTool === 'cutarea') {
