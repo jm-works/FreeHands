@@ -47,7 +47,7 @@ export class ShortcutManager {
         this.register('k', cm => cm.setTool('cutarea'));
         this.register('v', cm => cm.setTool('select'));
         this.register('h', cm => cm.setTool('pan'));
-        this.register('i', cm => cm.pickColor());
+        this.register('t', cm => cm.setTool('text'));
 
         this.register(']', cm => cm.setBrushSize(Math.min(cm.brushSize + 2, 100)));
         this.register('[', cm => cm.setBrushSize(Math.max(cm.brushSize - 2, 1)));
@@ -69,6 +69,8 @@ export class ShortcutManager {
         this.register('ctrl+x', cm => cm.clipboardCut());
         this.register('ctrl+v', cm => cm.clipboardPaste());
         this.register('ctrl+d', cm => cm.clipboardDuplicate());
+
+        this.register('i', cm => cm.pickColor());
     }
 
     destroy() {

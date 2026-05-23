@@ -9,6 +9,7 @@ import { AlignmentGuides } from '../AlignmentGuides.js';
 import { LineManager } from '../LineManager.js';
 import { SelectionPanel } from '../SelectionPanel.js';
 import { ShortcutManager } from '../ShortcutManager.js';
+import { TextManager } from '../TextManager.js';
 import { EyeDropperManager } from '../EyeDropperManager.js';
 
 import { CanvasRenderer } from './CanvasRenderer.js';
@@ -50,6 +51,7 @@ export class CanvasManager {
         this.fillTolerance = 32;
         this.brushOpacity = 1;
         this.currentTool = 'brush';
+        this.textSize = 24;
 
         this.isPanning = false;
         this.isSpacePressed = false;
@@ -89,6 +91,7 @@ export class CanvasManager {
         this.layerManager = new LayerManager(this);
         this.alignmentGuides = new AlignmentGuides(this);
         this.lineManager = new LineManager(this);
+        this.textManager = new TextManager(this);
         this.eyeDropperManager = new EyeDropperManager(this);
 
         this.canvas.layerManager = this.layerManager;
@@ -134,63 +137,38 @@ export class CanvasManager {
     setFillTolerance(val) { this.tools.setFillTolerance(val); }
     getBrushColorAsRGBA() { return this.tools.getBrushColorAsRGBA(); }
     setBrushOpacity(opacity) { this.tools.setBrushOpacity(opacity); }
-    pickColor() { return this.eyeDropperManager.pick(); }
+    createText(x, y) { this.textManager.createAt(x, y); }
 
     clipboardCopy() {
         if (this.currentTool === 'cutarea') {
             this.cutAreaManager.copy();
         } else if (this.currentTool === 'select') {
             const obj = this.canvas.getActiveObject();
-            if (obj) { this._pasteOffset = 0; obj.clone((c) => { this._clipboard = c; }); }
+            if (obj) this.cutAreaManager.copyObject(obj);
         }
     }
 
     clipboardCut() {
-        if (this.currentTool === 'cutarea') {
-            this.cutAreaManager.cut();
-        } else if (this.currentTool === 'select') {
+        if (this.currentTool === 'select') {
             const obj = this.canvas.getActiveObject();
-            if (!obj) return;
-            const objs = this.canvas.getActiveObjects();
-            this.historyManager.removeCommand(objs);
-            objs.forEach(o => this.canvas.remove(o));
-            this.canvas.discardActiveObject();
-            this.canvas.requestRenderAll();
-            this.canvas.selection = true;
-            this._pasteOffset = 0;
-            obj.clone((c) => { this._clipboard = c; });
+            if (obj) this.cutAreaManager.cutObject(obj);
         }
     }
 
     clipboardPaste() {
-        if (this.currentTool === 'cutarea' && this.cutAreaManager.clipboardDataURL) {
-            this.cutAreaManager.paste();
-        } else if (this.currentTool === 'select' && this._clipboard) {
-            this.events._selectPaste();
-        }
+        this.cutAreaManager.paste();
     }
 
     clipboardDuplicate() {
-        if (this.currentTool === 'select') this.events._selectDuplicate();
-    }
-
-    resizeCanvas(width, height) {
-        this.canvas.setWidth(width);
-        this.canvas.setHeight(height);
-        this.canvas.calcOffset();
-
-        const bgRect = this.canvas.getObjects().find(obj => obj.isBg);
-        if (bgRect) {
-            bgRect.set({ width: width, height: height });
-            this.canvas.sendToBack(bgRect);
-        }
-
-        this.canvas.requestRenderAll();
-        if (this.historyManager) {
-            this.historyManager.saveState();
+        if (this.currentTool === 'select') {
+            const obj = this.canvas.getActiveObject();
+            if (obj) this.cutAreaManager.duplicateObject(obj);
         }
     }
 
     placeImage(dataURL) { this.imageHandler.placeImage(dataURL); }
-    setPaperTexture(textureId) { this.textureHandler.setPaperTexture(textureId); }
+
+    pickColor() {
+        if (this.eyeDropperManager) this.eyeDropperManager.pick();
+    }
 }

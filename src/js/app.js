@@ -1,5 +1,5 @@
 import { CanvasManager } from './modules/canva/CanvasManager.js';
-import { ColorManager } from './modules/ColorManager.js';
+import { ColorManager, colorPickerModal } from './modules/ColorManager.js';
 import { IntroManager } from './modules/IntroManager.js';
 import { MenuManager } from './modules/MenuManager.js';
 import { promptModal } from './modules/PromptModal.js';
@@ -224,6 +224,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const stabilizerSlider = document.getElementById('brush-stabilizer');
     const stabilizerInput = document.getElementById('brush-stabilizer-val');
 
+    const textControls = document.getElementById('text-controls');
+    const textFontSelect = document.getElementById('text-font');
+    const textSizeSlider = document.getElementById('text-size');
+    const textSizeInput = document.getElementById('text-size-val');
+    const btnTextBold = document.getElementById('btn-text-bold');
+    const btnTextItalic = document.getElementById('btn-text-italic');
+    const btnTextUnderline = document.getElementById('btn-text-underline');
+    const btnAlignLeft = document.getElementById('btn-text-align-left');
+    const btnAlignCenter = document.getElementById('btn-text-align-center');
+    const btnAlignRight = document.getElementById('btn-text-align-right');
+    const textLeadingSlider = document.getElementById('text-leading');
+    const textLeadingInput = document.getElementById('text-leading-val');
+    const textSpacingSlider = document.getElementById('text-spacing');
+    const textSpacingInput = document.getElementById('text-spacing-val');
+    const textColorSwatch = document.getElementById('text-color-swatch');
+    const textColorWrap = document.getElementById('text-color-wrap');
+    let textCurrentColor = '#000000';
+
     const toolBtns = document.querySelectorAll('.tool-btn');
 
     function syncControls(slider, numberInput, callback) {
@@ -298,6 +316,144 @@ document.addEventListener('DOMContentLoaded', () => {
         canvasManager.setStabilizer(val);
     });
 
+    function syncTextUI(itext) {
+        if (!itext) return;
+
+        const fontVal = itext.fontFamily || 'sans-serif';
+        if (textFontSelect) textFontSelect.value = fontVal;
+        if (textFontLabel) {
+            const opt = [...textFontSelect.options].find(o => o.value === fontVal);
+            textFontLabel.textContent = opt ? opt.text : fontVal;
+        }
+
+        const size = itext.fontSize || 24;
+        if (textSizeSlider) {
+            textSizeSlider.value = size;
+            const pct = ((size - 8) / (200 - 8)) * 100;
+            textSizeSlider.style.setProperty('--slider-fill', `${pct}%`);
+        }
+        if (textSizeInput) textSizeInput.value = size;
+
+        const leading = Math.round((itext.lineHeight || 1.2) * 100);
+        if (textLeadingSlider) {
+            textLeadingSlider.value = leading;
+            const pct = ((leading - 50) / (300 - 50)) * 100;
+            textLeadingSlider.style.setProperty('--slider-fill', `${pct}%`);
+        }
+        if (textLeadingInput) textLeadingInput.value = leading;
+
+        const spacing = Math.round(itext.charSpacing || 0);
+        if (textSpacingSlider) {
+            textSpacingSlider.value = spacing;
+            const pct = ((spacing + 200) / 1000) * 100;
+            textSpacingSlider.style.setProperty('--slider-fill', `${pct}%`);
+        }
+        if (textSpacingInput) textSpacingInput.value = spacing;
+
+        const color = itext.fill || '#000000';
+        textCurrentColor = color;
+        if (textColorSwatch) textColorSwatch.style.background = color;
+
+        btnTextBold?.classList.toggle('active', itext.fontWeight === 'bold');
+        btnTextItalic?.classList.toggle('active', itext.fontStyle === 'italic');
+        btnTextUnderline?.classList.toggle('active', !!itext.underline);
+        [btnAlignLeft, btnAlignCenter, btnAlignRight].forEach(b => b?.classList.remove('active'));
+        const align = itext.textAlign || 'left';
+        if (align === 'left') btnAlignLeft?.classList.add('active');
+        else if (align === 'center') btnAlignCenter?.classList.add('active');
+        else if (align === 'right') btnAlignRight?.classList.add('active');
+    }
+
+    canvasManager.textManager.onTextCreated = (itext) => syncTextUI(itext);
+
+    canvasManager.canvas.on('selection:created', () => {
+        const obj = canvasManager.canvas.getActiveObject();
+        if (obj?.type === 'i-text') syncTextUI(obj);
+    });
+    canvasManager.canvas.on('selection:updated', () => {
+        const obj = canvasManager.canvas.getActiveObject();
+        if (obj?.type === 'i-text') syncTextUI(obj);
+    });
+
+    const tm = () => canvasManager.textManager;
+
+    const textFontLabel = document.getElementById('text-font-label');
+
+    textFontSelect?.addEventListener('mousedown', (e) => e.stopPropagation());
+    textFontSelect?.addEventListener('change', () => {
+        const val = textFontSelect.value;
+        const label = textFontSelect.options[textFontSelect.selectedIndex].text;
+        if (textFontLabel) textFontLabel.textContent = label;
+        tm().applyProp({ fontFamily: val });
+    });
+
+    if (textSizeSlider && textSizeInput) {
+        syncControls(textSizeSlider, textSizeInput, (val) => tm().applyProp({ fontSize: val }));
+    }
+
+    [btnTextBold, btnTextItalic, btnTextUnderline, btnAlignLeft, btnAlignCenter, btnAlignRight].forEach(btn => {
+        btn?.addEventListener('mousedown', (e) => e.preventDefault());
+    });
+
+    btnTextBold?.addEventListener('click', () => {
+        const obj = canvasManager.canvas.getActiveObject();
+        const next = obj?.fontWeight === 'bold' ? 'normal' : 'bold';
+        tm().applyProp({ fontWeight: next });
+        btnTextBold.classList.toggle('active', next === 'bold');
+    });
+
+    btnTextItalic?.addEventListener('click', () => {
+        const obj = canvasManager.canvas.getActiveObject();
+        const next = obj?.fontStyle === 'italic' ? 'normal' : 'italic';
+        tm().applyProp({ fontStyle: next });
+        btnTextItalic.classList.toggle('active', next === 'italic');
+    });
+
+    btnTextUnderline?.addEventListener('click', () => {
+        const obj = canvasManager.canvas.getActiveObject();
+        const next = !obj?.underline;
+        tm().applyProp({ underline: next });
+        btnTextUnderline.classList.toggle('active', next);
+    });
+
+    btnAlignLeft?.addEventListener('click', () => {
+        tm().applyProp({ textAlign: 'left' });
+        [btnAlignLeft, btnAlignCenter, btnAlignRight].forEach(b => b?.classList.remove('active'));
+        btnAlignLeft.classList.add('active');
+    });
+    btnAlignCenter?.addEventListener('click', () => {
+        tm().applyProp({ textAlign: 'center' });
+        [btnAlignLeft, btnAlignCenter, btnAlignRight].forEach(b => b?.classList.remove('active'));
+        btnAlignCenter.classList.add('active');
+    });
+    btnAlignRight?.addEventListener('click', () => {
+        tm().applyProp({ textAlign: 'right' });
+        [btnAlignLeft, btnAlignCenter, btnAlignRight].forEach(b => b?.classList.remove('active'));
+        btnAlignRight.classList.add('active');
+    });
+
+    btnAlignLeft?.classList.add('active');
+
+    if (textLeadingSlider && textLeadingInput) {
+        syncControls(textLeadingSlider, textLeadingInput, (val) => {
+            tm().applyProp({ lineHeight: val / 100 });
+        });
+    }
+
+    if (textSpacingSlider && textSpacingInput) {
+        syncControls(textSpacingSlider, textSpacingInput, (val) => {
+            tm().applyProp({ charSpacing: val });
+        });
+    }
+
+    textColorWrap?.addEventListener('click', () => {
+        colorPickerModal.show(textCurrentColor, (hex) => {
+            textCurrentColor = hex;
+            if (textColorSwatch) textColorSwatch.style.background = hex;
+            tm().applyProp({ fill: hex });
+        });
+    });
+
     canvasManager.onBrushSizeChange = (newSize) => {
         sizeSlider.value = newSize;
         sizeInput.value = newSize;
@@ -318,7 +474,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     canvasManager.onToolChange = (tool) => {
         updateActiveButtonUI(tool);
+        if (tool !== 'text' && textControls) textControls.style.display = 'none';
     };
+
+    canvasManager.canvas.on('mouse:dblclick', (opt) => {
+        if (canvasManager.currentTool !== 'select') return;
+        if (!opt.target || opt.target.type !== 'i-text') return;
+        if (textControls) textControls.style.display = 'flex';
+        syncTextUI(opt.target);
+    });
+
+    canvasManager.canvas.on('selection:cleared', () => {
+        if (canvasManager.currentTool === 'select' && textControls) {
+            textControls.style.display = 'none';
+        }
+    });
 
     function updateActiveButtonUI(toolId) {
         toolBtns.forEach(b => b.classList.remove('active'));
@@ -338,31 +508,48 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.addEventListener('click', () => {
             const toolId = btn.id;
 
+            const TEXT_STYLE_BTNS = ['btn-text-bold', 'btn-text-italic', 'btn-text-underline',
+                'btn-text-align-left', 'btn-text-align-center', 'btn-text-align-right'];
+            if (TEXT_STYLE_BTNS.includes(toolId)) return;
+
+            const hideText = () => { if (textControls) textControls.style.display = 'none'; };
+
             if (toolId === 'btn-brush' || toolId === 'btn-pen') {
                 sizeContainer.style.display = 'block';
                 opacityContainer.style.display = 'block';
                 stabilizerContainer.style.display = 'block';
                 toleranceContainer.style.display = 'none';
+                hideText();
             } else if (toolId === 'btn-rectangle' || toolId === 'btn-ellipse' || toolId === 'btn-line') {
                 sizeContainer.style.display = 'block';
                 opacityContainer.style.display = 'block';
                 stabilizerContainer.style.display = 'none';
                 toleranceContainer.style.display = 'none';
+                hideText();
             } else if (toolId === 'btn-eraser') {
                 sizeContainer.style.display = 'block';
                 opacityContainer.style.display = 'none';
                 stabilizerContainer.style.display = 'none';
                 toleranceContainer.style.display = 'none';
+                hideText();
             } else if (toolId === 'btn-fill') {
                 sizeContainer.style.display = 'none';
                 opacityContainer.style.display = 'none';
                 stabilizerContainer.style.display = 'none';
                 toleranceContainer.style.display = 'block';
+                hideText();
+            } else if (toolId === 'btn-text') {
+                sizeContainer.style.display = 'none';
+                opacityContainer.style.display = 'none';
+                stabilizerContainer.style.display = 'none';
+                toleranceContainer.style.display = 'none';
+                if (textControls) textControls.style.display = 'flex';
             } else {
                 sizeContainer.style.display = 'none';
                 opacityContainer.style.display = 'none';
                 stabilizerContainer.style.display = 'none';
                 toleranceContainer.style.display = 'none';
+                hideText();
             }
 
             switch (toolId) {
@@ -399,6 +586,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     break;
                 case 'btn-pan':
                     canvasManager.setTool('pan');
+                    break;
+                case 'btn-text':
+                    canvasManager.setTool('text');
                     break;
             }
 

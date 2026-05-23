@@ -478,7 +478,7 @@ export class CanvasEvents {
                 if (this.cm.currentTool === 'fill' || this.cm.currentTool === 'pan' ||
                     this.cm.currentTool === 'select' || this.cm.currentTool === 'cutarea' ||
                     this.cm.currentTool === 'rectangle' || this.cm.currentTool === 'ellipse' ||
-                    this.cm.currentTool === 'line') {
+                    this.cm.currentTool === 'line' || this.cm.currentTool === 'text') {
                     this.cm.cursorManager.hide();
                 } else {
                     this.cm.cursorManager.updatePosition(e.clientX, e.clientY);
@@ -576,7 +576,7 @@ export class CanvasEvents {
                 this.cm.currentTool !== 'fill' && this.cm.currentTool !== 'pan' &&
                 this.cm.currentTool !== 'select' && this.cm.currentTool !== 'cutarea' &&
                 this.cm.currentTool !== 'rectangle' && this.cm.currentTool !== 'ellipse' &&
-                this.cm.currentTool !== 'line') {
+                this.cm.currentTool !== 'line' && this.cm.currentTool !== 'text') {
                 this.cm.cursorManager.show();
             }
             this.cm.canvas.calcOffset();

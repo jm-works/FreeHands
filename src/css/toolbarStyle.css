@@ -231,3 +231,149 @@
     right: -10px;
     color: var(--border-strong);
 }
+
+#text-controls {
+    display: none;
+    align-items: center;
+    gap: 6px;
+}
+
+.text-font-slider {
+    width: 130px;
+    position: relative;
+}
+
+.text-font-select {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: transparent;
+    cursor: pointer;
+    z-index: 2;
+    appearance: none;
+    -webkit-appearance: none;
+    font-size: 0;
+}
+
+.text-font-select option {
+    background-color: var(--bg-panel);
+    color: var(--text-primary);
+    font-size: 0.8rem;
+}
+
+.text-font-label {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: left;
+    font-size: 0.72rem;
+    font-weight: 600;
+    font-family: var(--font-ui);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-primary);
+    text-shadow: 0px 1px 3px rgba(0, 0, 0, 1);
+    pointer-events: none;
+}
+
+.text-style-group,
+.text-align-group {
+    gap: 3px;
+}
+
+.text-style-btn {
+    width: 28px;
+    height: 28px;
+}
+
+.text-style-btn span {
+    font-size: 0.85rem;
+    font-family: serif;
+    color: var(--text-secondary);
+    transition: color 0.15s;
+    line-height: 1;
+}
+
+#btn-text-bold span {
+    font-weight: 700;
+}
+
+#btn-text-italic span {
+    font-style: italic;
+}
+
+#btn-text-underline span {
+    text-decoration: underline;
+}
+
+.text-style-btn:hover span {
+    color: var(--text-primary);
+}
+
+.text-style-btn.active {
+    background-color: rgba(192, 57, 43, 0.2);
+    border-color: var(--accent-color);
+    box-shadow: inset 0 0 8px rgba(192, 57, 43, 0.15), 0 0 6px rgba(192, 57, 43, 0.2);
+}
+
+.text-style-btn.active span {
+    color: #c0392b;
+}
+
+.text-align-btn {
+    width: 28px;
+    height: 28px;
+    color: var(--text-secondary);
+    fill: var(--text-secondary);
+}
+
+.text-align-btn svg {
+    color: inherit;
+    fill: inherit;
+    transition: color 0.15s, fill 0.15s;
+}
+
+.text-align-btn:hover {
+    color: var(--text-primary);
+    fill: var(--text-primary);
+}
+
+.text-align-btn.active {
+    background-color: rgba(192, 57, 43, 0.2);
+    border-color: var(--accent-color);
+    box-shadow: inset 0 0 8px rgba(192, 57, 43, 0.15), 0 0 6px rgba(192, 57, 43, 0.2);
+    color: #c0392b;
+    fill: #c0392b;
+}
+
+.text-color-wrap {
+    position: relative;
+    width: 26px;
+    height: 26px;
+    flex-shrink: 0;
+    cursor: pointer;
+}
+
+.text-color-swatch {
+    width: 26px;
+    height: 26px;
+    border-radius: 2px;
+    border: 1px solid var(--border-strong);
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.4);
+    transition: border-color 0.15s;
+    pointer-events: none;
+}
+
+.text-color-wrap:hover .text-color-swatch {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 6px rgba(192, 57, 43, 0.35);
+}
+
+.text-color-wrap input[type="color"] {
+    display: none;
+}

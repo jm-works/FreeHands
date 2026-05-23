@@ -10,7 +10,7 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Special+Elite&family=Oswald:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Special+Elite&family=Oswald:wght@400;600;700&family=Dancing+Script:wght@700&family=Bebas+Neue&family=Merriweather:wght@400;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 
     <link rel="stylesheet" href="src/css/bodyStyle.css">
     <link rel="stylesheet" href="src/css/toolbarStyle.css">
@@ -81,6 +81,103 @@
                     </div>
                 </div>
             </div>
+
+            <div id="text-controls" style="display: none;">
+
+                <div class="value-slider text-font-slider">
+                    <select id="text-font" class="text-font-select">
+                        <option value="sans-serif">Sans-Serif</option>
+                        <option value="serif">Serif</option>
+                        <option value="monospace">Monospace</option>
+                        <option value="Oswald">Oswald</option>
+                        <option value="Playfair Display">Playfair Display</option>
+                        <option value="Special Elite">Special Elite</option>
+                        <option value="Dancing Script">Dancing Script</option>
+                        <option value="Bebas Neue">Bebas Neue</option>
+                        <option value="Merriweather">Merriweather</option>
+                        <option value="Space Mono">Space Mono</option>
+                    </select>
+                    <div class="value-slider-overlay">
+                        <span id="text-font-label" class="text-font-label">Sans-Serif</span>
+                    </div>
+                </div>
+
+                <div class="value-slider" style="width: 120px;">
+                    <input type="range" id="text-size" min="8" max="200" value="24" class="tool-slider">
+                    <div class="value-slider-overlay">
+                        <label for="text-size">Size</label>
+                        <div class="value-slider-inputs">
+                            <input type="number" id="text-size-val" min="8" max="200" value="24">
+                            <span>px</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="value-slider" style="width: 115px;">
+                    <input type="range" id="text-leading" min="50" max="300" value="120" class="tool-slider">
+                    <div class="value-slider-overlay">
+                        <label for="text-leading">Leading</label>
+                        <div class="value-slider-inputs">
+                            <input type="number" id="text-leading-val" min="50" max="300" value="120">
+                            <span>%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="value-slider" style="width: 120px;">
+                    <input type="range" id="text-spacing" min="-200" max="800" value="0" class="tool-slider">
+                    <div class="value-slider-overlay">
+                        <label for="text-spacing">Spacing</label>
+                        <div class="value-slider-inputs">
+                            <input type="number" id="text-spacing-val" min="-200" max="800" value="0">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tool-group text-style-group">
+                    <button class="tool-btn text-style-btn" id="btn-text-bold" title="Bold">
+                        <span>B</span>
+                    </button>
+                    <button class="tool-btn text-style-btn" id="btn-text-italic" title="Italic">
+                        <span>I</span>
+                    </button>
+                    <button class="tool-btn text-style-btn" id="btn-text-underline" title="Underline">
+                        <span>U</span>
+                    </button>
+                </div>
+
+                <div class="tool-group text-align-group">
+                    <button class="tool-btn text-align-btn" id="btn-text-align-left" title="Align Left">
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+                            <rect x="1" y="2" width="12" height="1.5" rx="0.5" />
+                            <rect x="1" y="5.5" width="8" height="1.5" rx="0.5" />
+                            <rect x="1" y="9" width="12" height="1.5" rx="0.5" />
+                            <rect x="1" y="12.5" width="6" height="1.5" rx="0.5" />
+                        </svg>
+                    </button>
+                    <button class="tool-btn text-align-btn" id="btn-text-align-center" title="Align Center">
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+                            <rect x="1" y="2" width="12" height="1.5" rx="0.5" />
+                            <rect x="3" y="5.5" width="8" height="1.5" rx="0.5" />
+                            <rect x="1" y="9" width="12" height="1.5" rx="0.5" />
+                            <rect x="4" y="12.5" width="6" height="1.5" rx="0.5" />
+                        </svg>
+                    </button>
+                    <button class="tool-btn text-align-btn" id="btn-text-align-right" title="Align Right">
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+                            <rect x="1" y="2" width="12" height="1.5" rx="0.5" />
+                            <rect x="5" y="5.5" width="8" height="1.5" rx="0.5" />
+                            <rect x="1" y="9" width="12" height="1.5" rx="0.5" />
+                            <rect x="7" y="12.5" width="6" height="1.5" rx="0.5" />
+                        </svg>
+                    </button>
+                </div>
+
+                <div id="text-color-wrap" class="text-color-wrap" title="Text Color">
+                    <div id="text-color-swatch" class="text-color-swatch" style="background: #000000;"></div>
+                </div>
+
+            </div>
         </header>
 
         <div class="main-workspace">
@@ -98,6 +195,10 @@
 
                     <button class="tool-btn" id="btn-eyedropper" title="Color Picker">
                         <img src="src/assets/icons/Toolbar/color_picker.svg" alt="Color Picker" width="22" height="22">
+                    </button>
+
+                    <button class="tool-btn" id="btn-text" title="Text">
+                        <img src="src/assets/icons/Toolbar/text.svg" alt="Text" width="22" height="22">
                     </button>
 
                     <button class="tool-btn" id="btn-eraser" title="Eraser">

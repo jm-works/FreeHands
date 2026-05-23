@@ -86,6 +86,10 @@ export class CanvasTools {
             this.cm.canvas.requestRenderAll();
         }
 
+        if (prev === 'text' && tool !== 'text') {
+            this.cm.textManager._discard();
+        }
+
         this.cm.currentTool = tool;
 
         if (this.cm.selectionPanel && tool !== 'select') {
@@ -103,10 +107,13 @@ export class CanvasTools {
         } else if (tool === 'eraser') {
             const eraser = new EraserBrush(this.cm.canvas);
             this._setupDrawingTool(eraser);
-        } else if (tool === 'eyedropper') {
+        } else if (tool === 'text') {
             this.cm.canvas.isDrawingMode = false;
-            this.cm.canvas.defaultCursor = 'crosshair';
+            this.cm.canvas.defaultCursor = 'text';
             this.cm.cursorManager.hide();
+            this.cm.canvas.selection = false;
+            this._disableAllObjects();
+            this.cm.textManager._enableITexts();
         } else if (CROSSHAIR_TOOLS.has(tool)) {
             this.cm.canvas.isDrawingMode = false;
             this.cm.canvas.defaultCursor = 'crosshair';
