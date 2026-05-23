@@ -24,6 +24,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const introManager = new IntroManager('fh-root', 'fh-c');
 
     const canvasManager = new CanvasManager('drawing-canvas');
+
+    document.addEventListener('dragover', (e) => {
+        if (e.dataTransfer.types.includes('Files')) e.preventDefault();
+    });
+
+    document.addEventListener('drop', (e) => {
+        e.preventDefault();
+        const file = e.dataTransfer.files[0];
+        if (!file || !file.type.startsWith('image/')) return;
+
+        const reader = new FileReader();
+        reader.onload = (ev) => canvasManager.placeImage(ev.target.result);
+        reader.readAsDataURL(file);
+    });
+
     window._cm = canvasManager;
     const filterManager = new FilterManager(canvasManager);
     const effectManager = new EffectManager(canvasManager);
