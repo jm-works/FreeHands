@@ -204,60 +204,73 @@ export class SelectionPanel {
         const isMulti = obj.type === 'activeSelection';
         const targets = isMulti ? obj.getObjects() : [obj];
         const canvas = this.cm.canvas;
-        const refBounds = { left: 0, top: 0, width: canvas.width, height: canvas.height };
-
-        const prev = targets.map(o => ({ left: o.left, top: o.top }));
+        const cw = canvas.width;
+        const ch = canvas.height;
 
         if (isMulti) {
+            const centersBefore = targets.map(o => o.getCenterPoint());
+
             canvas.discardActiveObject();
 
-            const groupAbsBounds = (() => {
-                let minL = Infinity, minT = Infinity, maxR = -Infinity, maxB = -Infinity;
-                targets.forEach(o => {
-                    const br = o.getBoundingRect(true);
-                    minL = Math.min(minL, br.left);
-                    minT = Math.min(minT, br.top);
-                    maxR = Math.max(maxR, br.left + br.width);
-                    maxB = Math.max(maxB, br.top + br.height);
-                });
-                return { left: minL, top: minT, width: maxR - minL, height: maxB - minT };
-            })();
+            let minL = Infinity, minT = Infinity, maxR = -Infinity, maxB = -Infinity;
+            targets.forEach(o => {
+                const c = o.getCenterPoint();
+                const hw = o.getScaledWidth() / 2;
+                const hh = o.getScaledHeight() / 2;
+                minL = Math.min(minL, c.x - hw);
+                minT = Math.min(minT, c.y - hh);
+                maxR = Math.max(maxR, c.x + hw);
+                maxB = Math.max(maxB, c.y + hh);
+            });
 
             let dx = 0, dy = 0;
             switch (direction) {
-                case 'left': dx = refBounds.left - groupAbsBounds.left; break;
-                case 'center': dx = (refBounds.width / 2) - (groupAbsBounds.left + groupAbsBounds.width / 2); break;
-                case 'right': dx = refBounds.width - (groupAbsBounds.left + groupAbsBounds.width); break;
-                case 'top': dy = refBounds.top - groupAbsBounds.top; break;
-                case 'middle': dy = (refBounds.height / 2) - (groupAbsBounds.top + groupAbsBounds.height / 2); break;
-                case 'bottom': dy = refBounds.height - (groupAbsBounds.top + groupAbsBounds.height); break;
+                case 'left': dx = 0 - minL; break;
+                case 'center': dx = cw / 2 - (minL + maxR) / 2; break;
+                case 'right': dx = cw - maxR; break;
+                case 'top': dy = 0 - minT; break;
+                case 'middle': dy = ch / 2 - (minT + maxB) / 2; break;
+                case 'bottom': dy = ch - maxB; break;
             }
 
             targets.forEach(o => {
-                o.set({ left: o.left + dx, top: o.top + dy });
+                const c = o.getCenterPoint();
+                o.setPositionByOrigin(new fabric.Point(c.x + dx, c.y + dy), 'center', 'center');
                 o.setCoords();
             });
+
+            const prev = targets.map((o, i) => {
+                const cp = centersBefore[i];
+                return { left: cp.x - o.getScaledWidth() / 2, top: cp.y - o.getScaledHeight() / 2 };
+            });
+            const next = targets.map(o => ({ left: o.left, top: o.top }));
+            this.cm.historyManager.modifyCommand(targets, prev, next);
 
             const sel = new fabric.ActiveSelection(targets, { canvas });
             canvas.setActiveObject(sel);
             sel.setCoords();
+
         } else {
             const o = targets[0];
-            const ow = o.getScaledWidth();
-            const oh = o.getScaledHeight();
+            const c = o.getCenterPoint();
+            const hw = o.getScaledWidth() / 2;
+            const hh = o.getScaledHeight() / 2;
+            const prev = [{ left: o.left, top: o.top }];
+
             switch (direction) {
-                case 'left': o.set('left', refBounds.left + (o.originX === 'center' ? ow / 2 : 0)); break;
-                case 'center': o.set('left', refBounds.width / 2 + (o.originX === 'center' ? 0 : -ow / 2)); break;
-                case 'right': o.set('left', refBounds.width - (o.originX === 'center' ? ow / 2 : ow)); break;
-                case 'top': o.set('top', refBounds.top + (o.originY === 'center' ? oh / 2 : 0)); break;
-                case 'middle': o.set('top', refBounds.height / 2 + (o.originY === 'center' ? 0 : -oh / 2)); break;
-                case 'bottom': o.set('top', refBounds.height - (o.originY === 'center' ? oh / 2 : oh)); break;
+                case 'left': o.setPositionByOrigin(new fabric.Point(hw, c.y), 'center', 'center'); break;
+                case 'center': o.setPositionByOrigin(new fabric.Point(cw / 2, c.y), 'center', 'center'); break;
+                case 'right': o.setPositionByOrigin(new fabric.Point(cw - hw, c.y), 'center', 'center'); break;
+                case 'top': o.setPositionByOrigin(new fabric.Point(c.x, hh), 'center', 'center'); break;
+                case 'middle': o.setPositionByOrigin(new fabric.Point(c.x, ch / 2), 'center', 'center'); break;
+                case 'bottom': o.setPositionByOrigin(new fabric.Point(c.x, ch - hh), 'center', 'center'); break;
             }
             o.setCoords();
+
+            const next = [{ left: o.left, top: o.top }];
+            this.cm.historyManager.modifyCommand(targets, prev, next);
         }
 
-        const next = targets.map(o => ({ left: o.left, top: o.top }));
-        this.cm.historyManager.modifyCommand(targets, prev, next);
         canvas.requestRenderAll();
 
         requestAnimationFrame(() => {

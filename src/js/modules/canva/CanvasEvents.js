@@ -36,27 +36,37 @@ export class CanvasEvents {
 
             if (clonedObj.type === 'activeSelection') {
                 clonedObj.canvas = this.cm.canvas;
+
                 const children = [];
                 clonedObj.forEachObject((obj) => {
-                    obj.set('layerId', activeLayerId);
-                    obj.set({ left: obj.left + offset, top: obj.top + offset });
+                    const groupCenter = clonedObj.getCenterPoint();
+                    const pt = fabric.util.transformPoint(
+                        new fabric.Point(obj.left, obj.top),
+                        clonedObj.calcTransformMatrix()
+                    );
+                    obj.set({
+                        left: pt.x + offset,
+                        top: pt.y + offset,
+                        layerId: activeLayerId,
+                    });
                     applySelectStyle(obj);
-                    obj.set({ padding: obj.type === 'line' ? 10 : 0 });
                     this.cm.historyManager._assignUID(obj);
                     this.cm.canvas.add(obj);
                     children.push(obj);
                 });
-                clonedObj.setCoords();
+
                 this.cm.historyManager.addCommand(children);
+
+                const sel = new fabric.ActiveSelection(children, { canvas: this.cm.canvas });
+                this.cm.canvas.setActiveObject(sel);
             } else {
                 clonedObj.set({ left: clonedObj.left + offset, top: clonedObj.top + offset, layerId: activeLayerId });
                 applySelectStyle(clonedObj);
                 this.cm.historyManager._assignUID(clonedObj);
                 this.cm.canvas.add(clonedObj);
                 this.cm.historyManager.addCommand([clonedObj]);
+                this.cm.canvas.setActiveObject(clonedObj);
             }
-
-            this.cm.canvas.setActiveObject(clonedObj);
             if (this.cm.layerManager) this.cm.layerManager.updateZIndices();
             this.cm.canvas.requestRenderAll();
         });
@@ -523,12 +533,23 @@ export class CanvasEvents {
         this.cm.canvas.on('mouse:down', (e) => {
             if (!e.target) return;
 
-            const targets = e.target.type === 'activeSelection'
-                ? e.target.getObjects()
-                : [e.target];
+            const isGroup = e.target.type === 'activeSelection';
+            const targets = isGroup ? e.target.getObjects() : [e.target];
 
             targets.forEach(obj => {
-                obj._prevTransformProps = captureTransformProps(obj);
+                const snap = captureTransformProps(obj);
+
+                if (isGroup) {
+                    const groupMatrix = e.target.calcTransformMatrix();
+                    const pt = fabric.util.transformPoint(
+                        new fabric.Point(obj.left, obj.top),
+                        groupMatrix
+                    );
+                    snap.left = pt.x;
+                    snap.top = pt.y;
+                }
+
+                obj._prevTransformProps = snap;
             });
         });
 
@@ -546,15 +567,28 @@ export class CanvasEvents {
         this.cm.canvas.on('object:modified', (e) => {
             if (!e.target) return;
 
-            const targets = e.target.type === 'activeSelection'
-                ? e.target.getObjects()
-                : [e.target];
+            const isGroup = e.target.type === 'activeSelection';
+            const targets = isGroup ? e.target.getObjects() : [e.target];
 
             const withPrev = targets.filter(obj => obj._prevTransformProps);
             if (withPrev.length === 0) return;
 
             const prevProps = withPrev.map(obj => obj._prevTransformProps);
-            const nextProps = withPrev.map(obj => captureTransformProps(obj));
+            const nextProps = withPrev.map(obj => {
+                const snap = captureTransformProps(obj);
+
+                if (isGroup) {
+                    const groupMatrix = e.target.calcTransformMatrix();
+                    const pt = fabric.util.transformPoint(
+                        new fabric.Point(obj.left, obj.top),
+                        groupMatrix
+                    );
+                    snap.left = pt.x;
+                    snap.top = pt.y;
+                }
+
+                return snap;
+            });
 
             this.cm.historyManager.modifyCommand(withPrev, prevProps, nextProps);
             targets.forEach(obj => { delete obj._prevTransformProps; });

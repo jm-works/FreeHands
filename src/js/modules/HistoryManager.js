@@ -100,7 +100,6 @@ export class HistoryManager {
         if (this.cursor < 0 || this.isProcessing) return;
         if (this.ops[this.cursor].type === 'base') return;
 
-        // Set flag synchronously before any await — prevents re-entry from rapid keydown events
         this.isProcessing = true;
 
         const op = this.ops[this.cursor];
@@ -113,7 +112,6 @@ export class HistoryManager {
     redo() {
         if (this.cursor >= this.ops.length - 1 || this.isProcessing) return;
 
-        // Set flag synchronously before any await
         this.isProcessing = true;
 
         this.cursor++;
@@ -153,6 +151,7 @@ export class HistoryManager {
                 break;
 
             case 'modify':
+                this.canvas.discardActiveObject();
                 op.deltas.forEach(({ uid, next }) => {
                     const obj = this._findObjectByUID(uid);
                     if (obj) {
@@ -193,6 +192,7 @@ export class HistoryManager {
                 break;
 
             case 'modify':
+                this.canvas.discardActiveObject();
                 op.deltas.forEach(({ uid, prev }) => {
                     const obj = this._findObjectByUID(uid);
                     if (obj) {
