@@ -56,9 +56,13 @@ Manages `layers[]` — an ordered array of plain objects `{ id, name, visible, l
 
 Implements: `addLayer()`, `deleteLayer()`, `duplicateLayer()`, `mergeDown()`, `moveLayer()`, `setActiveLayer()`, `setLayerProperty()`, `toggleState()`.
 
+Layer names use a monotonically incrementing `_layerCount` counter that never decrements on delete or merge, preventing name collisions after structural changes.
+
+`mergeDown(id)` is `async`. It computes the union bounding box of all objects on both layers, rasterizes them onto a cropped offscreen `<canvas>` (layer below first with `source-over`, layer above on top with its `opacity` and `blendMode`), then replaces all objects from both layers with a single selectable `fabric.Image` positioned at `bounds.left / bounds.top`. The operation is registered as a `mergeFull` op in `HistoryManager`.
+
 Z-index consistency is maintained by `updateZIndices()`, which re-sorts `canvas._objects` to match the `layers[]` order after any structural change.
 
-All mutating operations register a `layerCommand` in `HistoryManager` for full undo support.
+All mutating operations register the appropriate command in `HistoryManager` for full undo support.
 
 The panel UI (drag-to-reorder, context menu, opacity slider, blend mode select) is built and managed entirely within this class via DOM API.
 
@@ -69,9 +73,9 @@ The panel UI (drag-to-reorder, context menu, opacity slider, blend mode select) 
 ### `HistoryManager`
 See [`HISTORY_SYSTEM.md`](HISTORY_SYSTEM.md) for the full specification.
 
-Op types: `add`, `remove`, `modify`, `raster`, `layer`, `snapshot_legacy`.
+Op types: `add`, `remove`, `modify`, `raster`, `mergeFull`, `layer`, `snapshot_legacy`.
 
-Key methods: `addCommand(objects)`, `removeCommand(objects)`, `modifyCommand(objects, prev, next)`, `rasterCommand(prevURL, nextURL, layerId, prevObjects)`, `layerCommand(action, data)`, `undo()`, `redo()`.
+Key methods: `addCommand(objects)`, `removeCommand(objects)`, `modifyCommand(objects, prev, next)`, `rasterCommand(prevURL, nextURL, layerId, prevObjects)`, `mergeFullCommand(data)`, `layerCommand(action, data)`, `undo()`, `redo()`.
 
 ---
 

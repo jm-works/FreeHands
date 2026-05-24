@@ -59,13 +59,32 @@ export class HistoryManager {
         });
     }
 
-    rasterCommand(prevDataURL, nextDataURL, layerId, prevObjects = []) {
+    rasterCommand(prevDataURL, nextDataURL, layerId, prevObjects = [], imageLeft = 0, imageTop = 0, selectable = false) {
         this._pushOp({
             type: 'raster',
             prevDataURL,
             nextDataURL,
             prevObjects,
-            layerId
+            layerId,
+            imageLeft,
+            imageTop,
+            selectable
+        });
+    }
+
+    mergeFullCommand({ prevDataURL, nextDataURL, prevObjectsBelow, prevObjectsAbove, mergedImageLeft, mergedImageTop, belowLayerId, sourceLayerId, sourceLayerIndex, sourceLayerSnapshot }) {
+        this._pushOp({
+            type: 'mergeFull',
+            prevDataURL,
+            nextDataURL,
+            prevObjectsBelow,
+            prevObjectsAbove,
+            mergedImageLeft,
+            mergedImageTop,
+            belowLayerId,
+            sourceLayerId,
+            sourceLayerIndex,
+            sourceLayerSnapshot
         });
     }
 
@@ -163,8 +182,50 @@ export class HistoryManager {
                 break;
 
             case 'raster':
-                await this._restoreRasterLayer(op.nextDataURL, op.layerId);
+                await this._restoreRasterLayer(op.nextDataURL, op.layerId, op.imageLeft || 0, op.imageTop || 0, op.selectable || false);
                 break;
+
+            case 'mergeFull': {
+                const lm = this.canvasManager.layerManager;
+
+                this.canvas.getObjects()
+                    .filter(obj => obj.layerId === op.belowLayerId && !obj.isBg)
+                    .forEach(obj => this.canvas.remove(obj));
+
+                this.canvas.getObjects()
+                    .filter(obj => obj.layerId === op.sourceLayerId)
+                    .forEach(obj => this.canvas.remove(obj));
+
+                await new Promise(resolve => {
+                    fabric.Image.fromURL(op.nextDataURL, (img) => {
+                        img.set({
+                            left: op.mergedImageLeft,
+                            top: op.mergedImageTop,
+                            layerId: op.belowLayerId,
+                            selectable: true,
+                            evented: true,
+                            hasControls: true,
+                            hasBorders: true,
+                            borderColor: '#c0392b',
+                            cornerColor: '#c0392b',
+                            cornerSize: 8,
+                            transparentCorners: false,
+                            originX: 'left',
+                            originY: 'top'
+                        });
+                        this.canvas.add(img);
+                        resolve();
+                    });
+                });
+
+                const srcIdx = lm.layers.findIndex(l => l.id === op.sourceLayerId);
+                if (srcIdx > -1) lm.layers.splice(srcIdx, 1);
+                lm.updateZIndices();
+                lm.renderUI();
+                lm.setActiveLayer(op.belowLayerId);
+                this.canvas.requestRenderAll();
+                break;
+            }
 
             case 'snapshot_legacy':
                 await this._restoreSnapshot(op.canvasJSON, op.layersState);
@@ -215,6 +276,32 @@ export class HistoryManager {
                     this.canvas.requestRenderAll();
                 }
                 break;
+
+            case 'mergeFull': {
+                const lm = this.canvasManager.layerManager;
+
+                this.canvas.getObjects()
+                    .filter(obj => obj.layerId === op.belowLayerId && !obj.isBg)
+                    .forEach(obj => this.canvas.remove(obj));
+
+                if (!lm.layers.find(l => l.id === op.sourceLayerId)) {
+                    lm.layers.splice(op.sourceLayerIndex, 0, { ...op.sourceLayerSnapshot });
+                }
+
+                if (op.prevObjectsBelow && op.prevObjectsBelow.length > 0) {
+                    await this._readdObjects(op.prevObjectsBelow);
+                }
+
+                if (op.prevObjectsAbove && op.prevObjectsAbove.length > 0) {
+                    await this._readdObjects(op.prevObjectsAbove);
+                }
+
+                lm.updateZIndices();
+                lm.renderUI();
+                lm.setActiveLayer(op.sourceLayerId);
+                this.canvas.requestRenderAll();
+                break;
+            }
 
             case 'snapshot_legacy': {
                 const prevOp = this._findPrevSnapshotLegacy(this.cursor - 1);
@@ -284,7 +371,7 @@ export class HistoryManager {
         );
     }
 
-    _restoreRasterLayer(dataURL, layerId) {
+    _restoreRasterLayer(dataURL, layerId, imageLeft = 0, imageTop = 0, selectable = false) {
         return new Promise((resolve) => {
             const layerObjects = this.canvas.getObjects().filter(
                 obj => obj.layerId === layerId && !obj.isBg
@@ -298,13 +385,17 @@ export class HistoryManager {
 
             fabric.Image.fromURL(dataURL, (img) => {
                 img.set({
-                    left: 0,
-                    top: 0,
+                    left: imageLeft,
+                    top: imageTop,
                     layerId,
-                    selectable: false,
-                    evented: false,
-                    hasControls: false,
-                    hasBorders: false,
+                    selectable,
+                    evented: selectable,
+                    hasControls: selectable,
+                    hasBorders: selectable,
+                    borderColor: selectable ? '#c0392b' : undefined,
+                    cornerColor: selectable ? '#c0392b' : undefined,
+                    cornerSize: selectable ? 8 : undefined,
+                    transparentCorners: selectable ? false : undefined,
                     originX: 'left',
                     originY: 'top'
                 });

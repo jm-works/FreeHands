@@ -10,6 +10,7 @@ export class LayerManager {
         this.layers = [];
         this.activeLayerId = null;
         this.contextMenu = null;
+        this._layerCount = 0;
 
         this.initUI();
         this.setupCanvasEvents();
@@ -103,10 +104,12 @@ export class LayerManager {
         });
     }
 
-    addLayer(name = `Layer ${this.layers.length + 1}`) {
+    addLayer(name = null) {
+        this._layerCount++;
+        const resolvedName = name ?? `Layer ${this._layerCount}`;
         const layer = {
             id: 'layer_' + Date.now(),
-            name: name,
+            name: resolvedName,
             visible: true,
             locked: false,
             opacity: 100,
@@ -171,7 +174,7 @@ export class LayerManager {
         }
     }
 
-    mergeDown(id) {
+    async mergeDown(id) {
         const index = this.layers.findIndex(l => l.id === id);
         if (index >= this.layers.length - 1) return;
 
@@ -180,41 +183,129 @@ export class LayerManager {
 
         if (layerBelow.locked) return;
 
-        const objects = this.canvas.getObjects().filter(obj => obj.layerId === id);
+        const historyManager = this.canvasManager.historyManager;
 
-        const affectedObjectsMeta = objects.map(obj => {
-            this.canvasManager.historyManager._assignUID(obj);
+        const objectsAbove = this.canvas.getObjects().filter(obj => obj.layerId === id);
+        const objectsBelow = this.canvas.getObjects().filter(obj => obj.layerId === layerBelow.id && !obj.isBg);
+        const allObjects = [...objectsBelow, ...objectsAbove];
+
+        if (allObjects.length === 0) {
+            this.layers.splice(index, 1);
+            this.setActiveLayer(layerBelow.id);
+            this.updateZIndices();
+            historyManager.layerCommand('merge', {
+                sourceId: id, belowId: layerBelow.id, index,
+                layerSnapshot: { ...layer }, affectedObjectsMeta: []
+            });
+            return;
+        }
+
+        const prevObjectsBelow = historyManager.snapshotLayerObjects(layerBelow.id);
+        const prevObjectsAbove = this.canvas.getObjects()
+            .filter(obj => obj.layerId === id)
+            .map(obj => {
+                historyManager._assignUID(obj);
+                return {
+                    uid: obj.__uid,
+                    json: obj.toObject(['layerId', 'isBg', 'isEraser', '__uid']),
+                    index: this.canvas.getObjects().indexOf(obj)
+                };
+            });
+        const prevDataURL = await historyManager.captureLayerDataURL(layerBelow.id);
+
+        const bounds = allObjects.reduce((acc, obj) => {
+            const rect = obj.getBoundingRect(true);
             return {
-                uid: obj.__uid,
-                originalLayerId: obj.layerId,
-                originalOpacity: obj.opacity !== undefined ? obj.opacity : 1,
-                originalGCO: obj.globalCompositeOperation || 'source-over',
-                newLayerId: layerBelow.id,
-                newOpacity: (obj.opacity !== undefined ? obj.opacity : 1) * (layer.opacity / 100),
-                newGCO: (layer.blendMode !== 'source-over' && !obj.isEraser)
-                    ? layer.blendMode
-                    : (obj.globalCompositeOperation || 'source-over')
+                left: Math.min(acc.left, rect.left),
+                top: Math.min(acc.top, rect.top),
+                right: Math.max(acc.right, rect.left + rect.width),
+                bottom: Math.max(acc.bottom, rect.top + rect.height)
             };
-        });
+        }, { left: Infinity, top: Infinity, right: -Infinity, bottom: -Infinity });
 
-        affectedObjectsMeta.forEach(({ uid, newLayerId, newOpacity, newGCO }) => {
-            const obj = this.canvasManager.historyManager._findObjectByUID(uid);
-            if (!obj) return;
-            obj.layerId = newLayerId;
-            obj.opacity = newOpacity;
-            obj.globalCompositeOperation = newGCO;
-        });
+        const cropW = Math.ceil(bounds.right - bounds.left);
+        const cropH = Math.ceil(bounds.bottom - bounds.top);
+        const offscreen = document.createElement('canvas');
+        offscreen.width = cropW;
+        offscreen.height = cropH;
+        const ctx = offscreen.getContext('2d');
 
-        this.layers.splice(index, 1);
-        this.setActiveLayer(layerBelow.id);
-        this.updateZIndices();
+        const renderLayerToCtx = (objects, layerOpacity, blendMode) => {
+            return new Promise((resolve) => {
+                if (objects.length === 0) { resolve(); return; }
 
-        this.canvasManager.historyManager.layerCommand('merge', {
-            sourceId: id,
-            belowId: layerBelow.id,
-            index,
-            layerSnapshot: { ...layer },
-            affectedObjectsMeta
+                const ordered = objects.slice().sort(
+                    (a, b) => this.canvas.getObjects().indexOf(a) - this.canvas.getObjects().indexOf(b)
+                );
+
+                const clonePromises = ordered.map(obj =>
+                    new Promise(res => obj.clone(res, ['layerId', 'isBg', 'isEraser', '__uid']))
+                );
+
+                Promise.all(clonePromises).then(clones => {
+                    const tmp = new fabric.StaticCanvas(null, { width: cropW, height: cropH, enableRetinaScaling: false });
+
+                    clones.forEach(clone => {
+                        clone.left = (clone.left || 0) - bounds.left;
+                        clone.top = (clone.top || 0) - bounds.top;
+                        clone.setCoords();
+                        tmp.add(clone);
+                    });
+
+                    tmp.renderAll();
+
+                    ctx.save();
+                    ctx.globalAlpha = layerOpacity / 100;
+                    ctx.globalCompositeOperation = blendMode || 'source-over';
+                    ctx.drawImage(tmp.getElement(), 0, 0);
+                    ctx.restore();
+
+                    tmp.dispose();
+                    resolve();
+                });
+            });
+        };
+
+        await renderLayerToCtx(objectsBelow, layerBelow.opacity, 'source-over');
+        await renderLayerToCtx(objectsAbove, layer.opacity, layer.blendMode);
+
+        const mergedDataURL = offscreen.toDataURL('image/png');
+
+        [...objectsAbove, ...objectsBelow].forEach(obj => this.canvas.remove(obj));
+
+        fabric.Image.fromURL(mergedDataURL, (img) => {
+            img.set({
+                left: bounds.left,
+                top: bounds.top,
+                layerId: layerBelow.id,
+                selectable: true,
+                evented: true,
+                hasControls: true,
+                hasBorders: true,
+                borderColor: '#c0392b',
+                cornerColor: '#c0392b',
+                cornerSize: 8,
+                transparentCorners: false,
+            });
+            historyManager._assignUID(img);
+            this.canvas.add(img);
+            this.layers.splice(index, 1);
+            this.setActiveLayer(layerBelow.id);
+            this.updateZIndices();
+            this.canvas.requestRenderAll();
+
+            historyManager.mergeFullCommand({
+                prevDataURL,
+                nextDataURL: mergedDataURL,
+                prevObjectsBelow,
+                prevObjectsAbove,
+                mergedImageLeft: bounds.left,
+                mergedImageTop: bounds.top,
+                belowLayerId: layerBelow.id,
+                sourceLayerId: id,
+                sourceLayerIndex: index,
+                sourceLayerSnapshot: { ...layer }
+            });
         });
     }
 
@@ -529,6 +620,7 @@ export class LayerManager {
 
         item.addEventListener('drop', (e) => {
             e.preventDefault();
+            e.stopPropagation();
             this._clearDropIndicators();
             if (!this._dragSrcId || this._dragSrcId === layerId) return;
 

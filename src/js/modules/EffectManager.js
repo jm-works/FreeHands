@@ -261,17 +261,24 @@ export class EffectManager {
             }
 
             layerObjects.forEach(obj => canvas.remove(obj));
+            const imgBounds = previewImg._cropBounds || { left: 0, top: 0 };
             previewImg.set({
                 layerId: activeLayerId,
-                selectable: false,
-                evented: false,
-                hasControls: false,
-                hasBorders: false
+                left: imgBounds.left,
+                top: imgBounds.top,
+                selectable: true,
+                evented: true,
+                hasControls: true,
+                hasBorders: true,
+                borderColor: '#c0392b',
+                cornerColor: '#c0392b',
+                cornerSize: 8,
+                transparentCorners: false,
             });
             canvas.requestRenderAll();
 
             const nextURL = await this.cm.historyManager.captureLayerDataURL(activeLayerId);
-            this.cm.historyManager.rasterCommand(prevURL, nextURL, activeLayerId, prevObjects);
+            this.cm.historyManager.rasterCommand(prevURL, nextURL, activeLayerId, prevObjects, imgBounds.left, imgBounds.top, true);
 
             document.body.removeChild(overlay);
             window.removeEventListener('keydown', onKey, { capture: true });
@@ -290,43 +297,59 @@ export class EffectManager {
         };
         window.addEventListener('keydown', onKey, { capture: true });
 
-        const tempFabricCanvas = new fabric.StaticCanvas(null, {
-            width: canvas.width,
-            height: canvas.height
-        });
+        const bounds = layerObjects.reduce((acc, obj) => {
+            const rect = obj.getBoundingRect(true);
+            return {
+                left: Math.min(acc.left, rect.left),
+                top: Math.min(acc.top, rect.top),
+                right: Math.max(acc.right, rect.left + rect.width),
+                bottom: Math.max(acc.bottom, rect.top + rect.height)
+            };
+        }, { left: Infinity, top: Infinity, right: -Infinity, bottom: -Infinity });
 
-        let cloneCount = 0;
-        const sortedObjects = [...layerObjects].sort((a, b) => {
-            return canvas.getObjects().indexOf(a) - canvas.getObjects().indexOf(b);
-        });
+        const cropW = Math.ceil(bounds.right - bounds.left);
+        const cropH = Math.ceil(bounds.bottom - bounds.top);
 
-        sortedObjects.forEach(obj => {
-            obj.clone((cloned) => {
-                tempFabricCanvas.add(cloned);
-                cloneCount++;
-                if (cloneCount === sortedObjects.length) {
-                    tempFabricCanvas.renderAll();
-                    const dataURL = tempFabricCanvas.toDataURL({ format: 'png' });
-                    tempFabricCanvas.dispose();
-                    fabric.Image.fromURL(dataURL, (img) => {
-                        img.set({
-                            left: 0,
-                            top: 0,
-                            layerId: activeLayerId,
-                            selectable: false,
-                            evented: false,
-                            hasControls: false,
-                            hasBorders: false,
-                            originX: 'left',
-                            originY: 'top'
-                        });
-                        previewImg = img;
-                        layerObjects.forEach(obj => { obj.visible = false; });
-                        canvas.add(previewImg);
-                        layerManager.updateZIndices();
-                        canvas.requestRenderAll();
-                    });
-                }
+        const sortedObjects = [...layerObjects].sort((a, b) =>
+            canvas.getObjects().indexOf(a) - canvas.getObjects().indexOf(b)
+        );
+
+        const clonePromises = sortedObjects.map(obj =>
+            new Promise(res => obj.clone(res, ['layerId', 'isBg', 'isEraser', '__uid']))
+        );
+
+        Promise.all(clonePromises).then(clones => {
+            const tmp = new fabric.StaticCanvas(null, { width: cropW, height: cropH, enableRetinaScaling: false });
+
+            clones.forEach(clone => {
+                clone.left = (clone.left || 0) - bounds.left;
+                clone.top = (clone.top || 0) - bounds.top;
+                clone.setCoords();
+                tmp.add(clone);
+            });
+
+            tmp.renderAll();
+            const dataURL = tmp.toDataURL({ format: 'png' });
+            tmp.dispose();
+
+            fabric.Image.fromURL(dataURL, (img) => {
+                img.set({
+                    left: bounds.left,
+                    top: bounds.top,
+                    layerId: activeLayerId,
+                    selectable: false,
+                    evented: false,
+                    hasControls: false,
+                    hasBorders: false,
+                    originX: 'left',
+                    originY: 'top'
+                });
+                img._cropBounds = bounds;
+                previewImg = img;
+                layerObjects.forEach(obj => { obj.visible = false; });
+                canvas.add(previewImg);
+                layerManager.updateZIndices();
+                canvas.requestRenderAll();
             });
         });
     }

@@ -14,6 +14,7 @@
 | `remove` | Object(s) removed from canvas | Re-add objects | Remove objects |
 | `modify` | Transform, style, or property change | Apply `prev` props | Apply `next` props |
 | `raster` | Pixel-destructive operation (erase, fill, cut) | Restore `prevDataURL` image | Restore `nextDataURL` image |
+| `mergeFull` | Layer merge (rasterizes two layers into one image) | Remove merged image, restore both layers' objects and source layer in stack | Re-apply merged image at original position, remove source layer from stack |
 | `layer` | Layer structure change (add, delete, duplicate, merge, move, property) | Reverse layer mutation | Re-apply layer mutation |
 | `snapshot_legacy` | Full canvas + layer state snapshot | Restore full snapshot | Restore full snapshot |
 
@@ -70,6 +71,7 @@ Every `SNAPSHOT_EVERY` (15) ops, a full canvas JSON and layer state are stored i
 - `add` — stores the layer descriptor; undo removes it and its objects.
 - `delete` — stores the layer descriptor + serialized objects; undo restores both.
 - `duplicate` — stores source ID, new ID, index, and object JSON.
-- `merge` — stores affected object metadata (previous `layerId`, `opacity`, `globalCompositeOperation`) so the merge is fully reversible.
 - `move` — stores previous and next indices.
 - `property` — stores `prop`, `prevValue`, `nextValue` (used for opacity, blendMode, visible, locked).
+
+> **Note:** `mergeDown` no longer uses `layerCommand('merge', ...)`. It registers a `mergeFull` op instead — see Op Types above.
