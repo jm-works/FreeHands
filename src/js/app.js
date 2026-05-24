@@ -388,7 +388,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     if (textSizeSlider && textSizeInput) {
-        syncControls(textSizeSlider, textSizeInput, (val) => tm().applyProp({ fontSize: val }));
+        syncControls(textSizeSlider, textSizeInput, (val) => tm().applyProp({ fontSize: val }, { commit: false }));
+        textSizeSlider.addEventListener('change', () => {
+            tm().applyProp({ fontSize: parseInt(textSizeSlider.value) }, { commit: true });
+        });
+        textSizeInput.addEventListener('change', () => {
+            tm().applyProp({ fontSize: parseInt(textSizeInput.value) }, { commit: true });
+        });
     }
 
     [btnTextBold, btnTextItalic, btnTextUnderline, btnAlignLeft, btnAlignCenter, btnAlignRight].forEach(btn => {
@@ -436,13 +442,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (textLeadingSlider && textLeadingInput) {
         syncControls(textLeadingSlider, textLeadingInput, (val) => {
-            tm().applyProp({ lineHeight: val / 100 });
+            tm().applyProp({ lineHeight: val / 100 }, { commit: false });
+        });
+        textLeadingSlider.addEventListener('change', () => {
+            tm().applyProp({ lineHeight: parseInt(textLeadingSlider.value) / 100 }, { commit: true });
+        });
+        textLeadingInput.addEventListener('change', () => {
+            tm().applyProp({ lineHeight: parseInt(textLeadingInput.value) / 100 }, { commit: true });
         });
     }
 
     if (textSpacingSlider && textSpacingInput) {
         syncControls(textSpacingSlider, textSpacingInput, (val) => {
-            tm().applyProp({ charSpacing: val });
+            tm().applyProp({ charSpacing: val }, { commit: false });
+        });
+        textSpacingSlider.addEventListener('change', () => {
+            tm().applyProp({ charSpacing: parseInt(textSpacingSlider.value) }, { commit: true });
+        });
+        textSpacingInput.addEventListener('change', () => {
+            tm().applyProp({ charSpacing: parseInt(textSpacingInput.value) }, { commit: true });
         });
     }
 

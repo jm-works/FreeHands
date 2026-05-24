@@ -26,7 +26,13 @@ export class TextManager {
         });
 
         this.cm.canvas.on('text:editing:entered', (opt) => {
-            if (this.onTextCreated) this.onTextCreated(opt.target);
+            const itext = opt.target;
+
+            if (itext.__committed) {
+                itext.__preEditSnapshot = this._snapshotProps(itext);
+            }
+
+            if (this.onTextCreated) this.onTextCreated(itext);
         });
 
         this.cm.canvas.on('text:editing:exited', (opt) => {
@@ -43,8 +49,36 @@ export class TextManager {
                 itext.__committed = true;
                 this.cm.historyManager._assignUID(itext);
                 this.cm.historyManager.addCommand([itext]);
+            } else if (itext.__preEditSnapshot) {
+                const prev = itext.__preEditSnapshot;
+                const next = this._snapshotProps(itext);
+                if (this._propsChanged(prev, next)) {
+                    this.cm.historyManager.modifyCommand([itext], [prev], [next]);
+                }
+                delete itext.__preEditSnapshot;
             }
         });
+    }
+
+    _snapshotProps(itext) {
+        return {
+            text: itext.text,
+            fontFamily: itext.fontFamily,
+            fontSize: itext.fontSize,
+            fontWeight: itext.fontWeight,
+            fontStyle: itext.fontStyle,
+            underline: itext.underline,
+            textAlign: itext.textAlign,
+            lineHeight: itext.lineHeight,
+            charSpacing: itext.charSpacing,
+            fill: itext.fill,
+            left: itext.left,
+            top: itext.top,
+        };
+    }
+
+    _propsChanged(prev, next) {
+        return Object.keys(prev).some(k => prev[k] !== next[k]);
     }
 
     _createAt(x, y) {
@@ -76,19 +110,39 @@ export class TextManager {
         this.cm.canvas.requestRenderAll();
     }
 
-    applyProp(props) {
+    applyProp(props, { commit = true } = {}) {
         Object.assign(this._defaults, props);
         if (props.fontSize !== undefined) this.cm.textSize = props.fontSize;
 
         const itext = this.cm.canvas.getActiveObject();
         if (!itext || itext.type !== 'i-text') return;
 
-        itext.set(props);
-        if (itext.isEditing) {
-            itext.initDimensions();
-            itext.setCoords();
+        if (!commit) {
+            if (!itext.__slidePrevSnapshot) {
+                itext.__slidePrevSnapshot = this._snapshotProps(itext);
+            }
+            itext.set(props);
+            if (itext.isEditing) { itext.initDimensions(); itext.setCoords(); }
+            this.cm.canvas.requestRenderAll();
+            return;
         }
+
+        const prev = itext.__slidePrevSnapshot
+            ? itext.__slidePrevSnapshot
+            : (itext.__committed ? this._snapshotProps(itext) : null);
+
+        delete itext.__slidePrevSnapshot;
+
+        itext.set(props);
+        if (itext.isEditing) { itext.initDimensions(); itext.setCoords(); }
         this.cm.canvas.requestRenderAll();
+
+        if (prev && itext.__committed) {
+            const next = this._snapshotProps(itext);
+            if (this._propsChanged(prev, next)) {
+                this.cm.historyManager.modifyCommand([itext], [prev], [next]);
+            }
+        }
     }
 
     _enableITexts() {

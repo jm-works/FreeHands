@@ -99,7 +99,6 @@ export class HistoryManager {
     undo() {
         if (this.cursor < 0 || this.isProcessing) return;
         if (this.ops[this.cursor].type === 'base') return;
-
         this.isProcessing = true;
 
         const op = this.ops[this.cursor];
@@ -156,6 +155,7 @@ export class HistoryManager {
                     const obj = this._findObjectByUID(uid);
                     if (obj) {
                         obj.set(next);
+                        if (obj.type === 'i-text') obj.initDimensions();
                         obj.setCoords();
                     }
                 });
@@ -197,6 +197,7 @@ export class HistoryManager {
                     const obj = this._findObjectByUID(uid);
                     if (obj) {
                         obj.set(prev);
+                        if (obj.type === 'i-text') obj.initDimensions();
                         obj.setCoords();
                     }
                 });
