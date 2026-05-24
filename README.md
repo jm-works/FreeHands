@@ -23,6 +23,10 @@
 
   ### [Try FreeHands Live](https://jm-works.github.io/FreeHands/)
 
+  <br>
+
+  <img src="https://i.postimg.cc/Vs4ZJnvx/Free-Hands.png" alt="FreeHands Screenshot" width="100%">
+
 </div>
 
 ---
@@ -80,6 +84,7 @@ No `npm install`. No build step. Fabric.js is loaded via CDN.
 | [`docs/HISTORY_SYSTEM.md`](docs/HISTORY_SYSTEM.md) | Command Pattern internals, op types, undo/redo flow |
 | [`docs/CANVAS_RENDER.md`](docs/CANVAS_RENDER.md) | Layer compositing pipeline, offscreen rendering |
 | [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) | Contribution guidelines and code conventions |
+| [Documentação Técnica (PT-BR)](https://flipbookpdf.net/web/site/7c786f1ae3461acc29adcb44b6d224515fcf29ce202605.pdf.html) | Documentação técnica completa em português |
 
 ---
 
