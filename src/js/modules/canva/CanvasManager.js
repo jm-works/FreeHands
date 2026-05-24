@@ -165,7 +165,6 @@ export class CanvasManager {
             this._clipboard = cloned;
             this._pasteOffset = 0;
         });
-        // Remove after cloning (async-safe)
         const targets = this.canvas.getActiveObjects();
         this.historyManager.removeCommand(targets);
         targets.forEach(o => this.canvas.remove(o));
@@ -190,5 +189,31 @@ export class CanvasManager {
 
     pickColor() {
         if (this.eyeDropperManager) this.eyeDropperManager.pick();
+    }
+
+    resizeCanvas(w, h) {
+        this.canvas.setDimensions({ width: w, height: h });
+        const bg = this.canvas.getObjects().find(obj => obj.isBg);
+        if (bg) {
+            if (bg.type === 'rect') {
+                bg.set({ width: w, height: h });
+                bg.setCoords();
+            }
+        }
+
+        if (this.textureHandler) {
+            const tid = this.textureHandler.currentTextureId;
+            if (tid && tid !== 'none') {
+                delete this.textureHandler.textureCache[`${tid}_${w}x${h}`];
+                this.textureHandler.reapplyTexture();
+            }
+        }
+
+        this.canvas.calcOffset();
+        this.canvas.requestRenderAll();
+    }
+
+    setPaperTexture(textureId) {
+        this.textureHandler.setPaperTexture(textureId, true);
     }
 }

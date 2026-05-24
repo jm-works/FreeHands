@@ -55,9 +55,6 @@ export const PressureBrush = fabric.util.createClass(fabric.BaseBrush, {
         this._anchorPoint = null;
     },
 
-    // PATCH — PressureBrush.js
-    // Substituir o bloco completo de addPoint por este:
-
     addPoint: function (pointer, e, isDown) {
         let rawPressure = 0.5;
         if (e && typeof e.pressure === 'number') {

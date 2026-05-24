@@ -125,9 +125,9 @@ export class SelectionPanel {
         let x = vb.left + vb.width / 2 - panelW / 2;
         x = Math.max(workspaceRect.left + PANEL_MARGIN, Math.min(x, workspaceRect.right - panelW - PANEL_MARGIN));
 
-        let y = vb.top - panelH - PANEL_OFFSET_Y;
-        if (y < workspaceRect.top + PANEL_MARGIN) {
-            y = vb.bottom + PANEL_OFFSET_Y;
+        let y = vb.bottom + PANEL_OFFSET_Y;
+        if (y + panelH > workspaceRect.bottom - PANEL_MARGIN) {
+            y = vb.top - panelH - PANEL_OFFSET_Y;
         }
 
         this._panel.style.left = `${x}px`;
